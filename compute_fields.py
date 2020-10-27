@@ -16,6 +16,9 @@ z_nbody = 1. # redshift where we measure power spectrum
 Lbox = 2000. # box size of the simulation [Mpc/h]
 cpd = 455 # cells per dimension (internal to code)
 
+# power spectrum parameters
+interlaced = True
+
 # simulation name
 sim_name = "AbacusSummit_hugebase_c000_ph000"
 
@@ -113,6 +116,7 @@ matter['Weight'] = weights
 
 cat = ArrayCatalog(matter)
 mesh_mat = cat.to_mesh(window='tsc',Nmesh=Nmesh,BoxSize=BoxSize)
+
 r_mat = FFTPower(mesh_mat, mode='1d')
 ks = r_mat.power['k']
 P_mat = r_mat.power['power']
@@ -123,10 +127,13 @@ galaxies = {}
 galaxies['Position'] = pos_gal
 
 cat = ArrayCatalog(galaxies)
-mesh_gal = cat.to_mesh(window='tsc',Nmesh=Nmesh,BoxSize=BoxSize)
+mesh_gal = cat.to_mesh(window='tsc',Nmesh=Nmesh,BoxSize=BoxSize,interlaced=interlaced,compensated=False)
+compensation = mesh.CompensateTSC
+mesh = mesh.apply(compensation, kind='circular', mode='complex')
+
 r_gal = FFTPower(mesh_gal, mode='1d')
 ks = r_gal.power['k']
-P_gal = r_gal.power['power']
+P_gal = r_gal.power['power']#.real
 
 # can also compute cross power spectra
 #r_mat_gal = FFTPower(first=mesh_gal, second=mesh_mat, mode='1d')#, dk=0.005, kmin=0.01)   
