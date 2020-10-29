@@ -44,7 +44,7 @@ def get_density(directory,want_show=False):
         fig, ax = plt.subplots()
         cax = ax.imshow(dens[i_slice,:,:],interpolation='none',origin='lower')
         cbar = fig.colorbar(cax)
-        plt.savefig("figs/density.png")
+        plt.savefig("../figs/density.png")
         plt.close()
 
     return dens
@@ -57,7 +57,7 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     X = data['PX_CM']
     Y = data['PY_CM']
     Z = data['PZ_CM']
-    pos_halo = np.hstack((X,Y,Z)).T
+    pos_halo = np.vstack((X,Y,Z)).T
 
     
     # load the IC and some snapshot
@@ -85,13 +85,12 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
 
 def main():
     # directory of simulation
-    directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+    directory = "/mnt/gosling1/boryanah/small_box_damonge/"#"/global/cscratch1/sd/damonge/NbodySims/Sim256/"
 
     # get the coarse density field
     dens = get_density(directory,want_show=True)
-    np.save("data/density.npy",dens)
-    
-    
+    np.save("../data/density.npy",dens)
+
     # find all files
     ic_fns = sorted(glob.glob(directory+"ic_*"))
     snap_fns = sorted(glob.glob(directory+"snap_*"))
@@ -102,5 +101,6 @@ def main():
 
     # return position of the particles and halos
     pos_ic, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
+
 
 

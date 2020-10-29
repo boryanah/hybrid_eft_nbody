@@ -1,21 +1,21 @@
 import numpy as np
 import numpy.linalg as la
+import pyccl as ccl
+import os
 
 def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
     # load the density field
     density_ic = np.load(dens_dir)
-
-    print("Loaded density field")
     
     # scale the density as suggested in Modi et al.
     D_z = ccl.growth_factor(cosmo,1./(1+z_nbody))
     density_scaled = D_z*density_ic
 
     # smooth field
-    if os.path.exists(data_dir+"density_smooth.npy"):
+    if os.path.exists(data_dir+"density_smooth_%d.npy"%(int(R_smooth))):
         density_smooth = np.load(data_dir+"density_smooth_%d.npy"%(int(R_smooth)))
     else:
-        density_smooth = get_smooth_density(D,R=R_smooth,N_dim=N_dim,Lbox=Lbox)
+        density_smooth = get_smooth_density(density_scaled,R=R_smooth,N_dim=N_dim,Lbox=Lbox)
         np.save(data_dir+"density_smooth_%d.npy"%(int(R_smooth)),density_smooth)
 
     # the fields are i = {1,delta,delta^2,nabla^2 delta,s^2} 
@@ -32,8 +32,8 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
         np.save(data_dir+"delta_sq_%d.npy"%(int(R_smooth)),delta_sq)
 
     if os.path.exists(data_dir+"nabla_sq_%d.npy"%(int(R_smooth))) and os.path.exists(data_dir+"s_sq_%d.npy"%(int(R_smooth))):
-        nabla_sq = np.load(data_dir+"nabla_sq.npy")
-        s_sq = np.load(data_dir+"s_sq.npy")
+        nabla_sq = np.load(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)))
+        s_sq = np.load(data_dir+"s_sq_%d.npy"%(int(R_smooth)))
     else:
         # compute fields
         nabla_sq, s_sq = get_fields(delta, Lbox, N_dim, fields=["nabla_sq","s_sq"])
@@ -91,11 +91,6 @@ def get_tidal_field(dfour,karr,N_dim):
                     pass
                 else:
                     ksq = karr[a]**2 + karr[b]**2 + karr[c]**2
-                    #phifour[a, b, c] = -dfour[a, b, c]/ksq
-                    # smoothed density Gauss fourier
-                    # dksmo[a, b, c] = Wg(ksq)*dfour[a, b, c]
-                    # smoothed density TH fourier
-                    #dkth[a, b, c] = Wth(ksq)*dfour[a, b, c]
                     # all 9 components
                     tfour[a, b, c, 0, 0] = karr[a]*karr[a]*dfour[a, b, c]/ksq
                     tfour[a, b, c, 1, 1] = karr[b]*karr[b]*dfour[a, b, c]/ksq
@@ -106,11 +101,6 @@ def get_tidal_field(dfour,karr,N_dim):
                     tfour[a, b, c, 0, 2] = tfour[a, b, c, 2, 0]
                     tfour[a, b, c, 1, 2] = karr[b]*karr[c]*dfour[a, b, c]/ksq
                     tfour[a, b, c, 2, 1] = tfour[a, b, c, 1, 2]
-                    # smoothed tidal Gauss fourier
-                    # tksmo[a, b, c, :, :] = Wg(ksq)*tfour[a, b, c, :, :]
-                    # smoothed tidal TH fourier
-                    #tkth[a, b, c, :, :] = Wth(ksq)*tfour[a, b, c, :, :]
-
     
     tidt = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
     return tidt
