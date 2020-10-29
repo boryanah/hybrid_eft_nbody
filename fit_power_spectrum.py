@@ -3,10 +3,11 @@ import os
 from nbodykit.lab import *
 import pyccl as ccl
 from scipy.optimize import minimize
+import glob
 
-from compute_tools import load_fields
-from power_spectrum_tools import get_all_cross_ps, get_mesh_list, predict_Pk, get_Pk_true
-from read_abacus import read_abacus
+from tools.compute_fields import load_fields
+from tools.power_spectrum import get_all_cross_ps, get_mesh_list, predict_Pk, get_Pk_true
+#from read_abacus import read_abacus
 from read_gadget import read_gadget
 
 simulation_code = 'gadget'#'abacus'
@@ -59,7 +60,7 @@ elif simulation_code == 'gadget':
     Omega_c = 0.655
     Omega_b = 0.045
     h = 0.7
-    sigma_8_m = 0.8
+    sigma8_m = 0.8
     
     # directory where the data is saved
     dens_dir = "data/density.npy"
@@ -81,7 +82,8 @@ elif simulation_code == 'gadget':
 
     # return position of the particles and halos
     lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
-    
+
+    print("obtained positions and snapshots")
 # user choices
 N_dim = ppd # particle mesh size
 interlaced = True

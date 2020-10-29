@@ -78,10 +78,6 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     # reorder so that they are matching [1,2,3,...,Npart-1]
     pos_ic = pos_ic[comm1]
     pos_snap = pos_snap[comm2]
-
-    print(pos_halo.max())
-    print(pos_ic.max())
-    print(pos_snap.max())
     
     # TODO: it is more efficient to just order both in ascending order (in fact IC always ascending)
     
