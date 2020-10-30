@@ -81,8 +81,6 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     i_sort_snap = np.argsort(id_snap)
     pos_snap = pos_snap[i_sort_snap]
     
-    # TODO: it is more efficient to just order both in ascending order (in fact IC always ascending)
-    
     return pos_ic, pos_snap, pos_halo
 
 def main():

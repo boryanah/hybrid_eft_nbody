@@ -11,7 +11,8 @@ from tools.power_spectrum import get_all_cross_ps, get_mesh_list, predict_Pk, ge
 #from tools.read_abacus import read_abacus
 from tools.read_gadget import read_gadget
 
-simulation_code = 'gadget'#'abacus'
+simulation_code = 'precomputed'#'gadget'#'abacus'
+machine = 'alan'#'NERSC'
 
 if simulation_code == 'abacus':
     # simulation name, see https://abacussummit.readthedocs.io/en/latest/simulations.html
@@ -20,12 +21,18 @@ if simulation_code == 'abacus':
     # load simulation information
     lagr_pos, pos_snap, halo_table, header = read_abacus(sim_name,z_nbody)
     pos_halo = halo_table['x_L2com']
+    N_halo = pos_halo.shape[0]
     
     # parameter choices for simulation TODO: read from header
     ppd = 2304 # particle per dimension in the sim
     z_nbody = 1. # redshift where we measure power spectrum
     Lbox = 2000. # box size of the simulation [Mpc/h]
 
+    # convert [-Lbox/2.,Lbox/2.] to [0,Lbox]
+    pos_halo += Lbox/2.
+    pos_snap += Lbox/2.
+    lagr_pos += Lbox/2.
+    
     # cosmological parameters # TODO: read from file
     h = 0.6736
     n_s = 0.9649
@@ -36,8 +43,10 @@ if simulation_code == 'abacus':
     # load the cosmology # TODO: move into function
     cosmo = ccl.Cosmology(n_s=n_s, sigma8=sigma8_m, h=h, Omega_c=Omega_c, Omega_b=Omega_b)
 
-    dens_dir = "/mnt/alan1/boryanah/ICs/density.npy"# TODO: change
-    data_dir = "BLABLA"
+    if machine == 'alan':
+        dens_dir = "/mnt/store1/boryanah/ICs/density.npy"
+    elif machine == 'NERSC':
+        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"
 
 elif simulation_code == 'gadget':
     # simulation parameters
@@ -61,32 +70,38 @@ elif simulation_code == 'gadget':
     cosmo = ccl.Cosmology(n_s=n_s, sigma8=sigma8_m, h=h, Omega_c=Omega_c, Omega_b=Omega_b)
 
     # directory of simulation
-    directory = "/mnt/gosling1/boryanah/small_box_damonge/"#"/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+    if machine == 'alan':
+        directory = "/mnt/gosling1/boryanah/small_box_damonge/"
+    elif machine == 'NERSC':
+        directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
 
     # find all files
     ic_fns = sorted(glob.glob(directory+"ic_*"))
     snap_fns = sorted(glob.glob(directory+"snap_*"))
     fof_fns = sorted(glob.glob(directory+"fof_*.fits"))
-
-    print(ic_fns,snap_fns,fof_fns)
     
     # return position of the particles and halos
     lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
-
+    N_halo = pos_halo.shape[0]
+    
 print("Obtained positions and snapshots")
 
 # user choices
-ppd = 256# todo: repeat
-N_dim = ppd # particle mesh size
 interlaced = True
-R_smooth = 4./2
-k_max = 1.
+R_smooth = 2.
+k_max = 0.5
+k_min = 0.05 # why is nothing else working?
 data_dir = "data/"# TODO: change
+N_dim = 256 # particle mesh size; usually ppd
+N_halo = 41130 #TODO: change
+Lbox = 175. #TODO: change
+n_halo = N_halo/Lbox**3.
+P_sn = 1./n_halo
 
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
-if os.path.exists(data_dir+"Pk_true_mean.npy"):#todo
+if os.path.exists(data_dir+"Pk_true_mean.npy"):#todo mean vs raw
     Pk_true = np.load(data_dir+"Pk_true_mean.npy")
     ks = np.load(data_dir+"ks.npy")
 else:
@@ -100,10 +115,13 @@ else:
 Pk_err = np.load(data_dir+"Pk_true_err.npy")
 
 # apply cuts to the data
-k_cut = ks < k_max
+k_cut = (ks < k_max) & (ks >= k_min)
 Pk_true = Pk_true[k_cut]
 Pk_err = Pk_err[k_cut]
 ks = ks[k_cut]
+
+# subtract shot noise
+Pk_true -= P_sn
 
 # covariance matrix
 cov = np.diag(Pk_err)
@@ -112,7 +130,7 @@ icov = np.linalg.inv(cov)
 icov[0,0] = 1.e6
 
 # compute all 15 combinations
-if False:#os.path.exists(data_dir+"Pk_all_%d.npy"%(int(R_smooth))):
+if os.path.exists(data_dir+"Pk_all_%d.npy"%(int(R_smooth))):
     ks_all = np.load(data_dir+"ks_all.npy")
     Pk_all = np.load(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)))
     k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
@@ -157,6 +175,7 @@ f_params = np.array([b_1, b_2, b_nabla, b_s])
 # minimize to get parameters
 x0 = f_params
 xtol = 1.e-6
+# nelder-mead, powell
 res = minimize(calculate_chi2, x0, method='nelder-mead',\
                options={'xtol': xtol, 'disp': True})
 

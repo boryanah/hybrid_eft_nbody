@@ -33,24 +33,36 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
         delta_sq -= np.mean(delta_sq)
         np.save(data_dir+"delta_sq_%d.npy"%(int(R_smooth)),delta_sq)
 
-    if os.path.exists(data_dir+"nabla_sq_%d.npy"%(int(R_smooth))) and os.path.exists(data_dir+"s_sq_%d.npy"%(int(R_smooth))):
+    fields_missing = []
+    if os.path.exists(data_dir+"nabla_sq_%d.npy"%(int(R_smooth))):
         nabla_sq = np.load(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)))
+    else:
+        fields_missing.append('nabla_sq')
+
+    if os.path.exists(data_dir+"s_sq_%d.npy"%(int(R_smooth))):    
         s_sq = np.load(data_dir+"s_sq_%d.npy"%(int(R_smooth)))
     else:
-        # compute fields
-        nabla_s = get_nabla_s(delta, Lbox, N_dim, fields=['nabla_sq','s_sq'])
-        nabla_sq = nabla_s['nabla_sq']
-        s_sq = nabla_s['s_sq']
-        
-        # subtract means
-        nabla_sq -= np.mean(nabla_sq)
-        s_sq -= np.mean(s_sq)
-        np.save(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)),nabla_sq)
-        np.save(data_dir+"s_sq_%d.npy"%(int(R_smooth)),s_sq)
+        fields_missing.append('nabla_sq')
+
+    # compute fields
+    if len(fields_missing) > 0:
+        fields_dict = get_nabla_sq_s_sq(delta, Lbox, N_dim, fields=fields_missing)
+        try:
+            nabla_sq = fields_dict['nabla_sq']
+            nabla_sq -= np.mean(nabla_sq)
+            np.save(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)),nabla_sq)
+        except:
+            pass
+        try:
+            s_sq = fields_dict['s_sq']
+            s_sq -= np.mean(s_sq)
+            np.save(data_dir+"s_sq_%d.npy"%(int(R_smooth)),s_sq)
+        except:
+            pass
 
     return ones, delta, delta_sq, nabla_sq, s_sq
 
-def get_nabla_s(delta,Lbox,N_dim,fields):
+def get_nabla_sq_s_sq(delta,Lbox,N_dim,fields):
     # construct wavenumber array
     karr = np.fft.fftfreq(N_dim, d=Lbox/(2*np.pi*N_dim))
     dfour = np.fft.fftn(delta)
@@ -58,18 +70,17 @@ def get_nabla_s(delta,Lbox,N_dim,fields):
     # fields to return
     returned_fields = {}
     if 'nabla_sq' in fields:
-        nabla_sq = get_nabla_sq(dfour,karr,N_dim)
+        nablasqfour = get_nabla_sq(dfour,karr,N_dim)
+        nabla_sq = np.real(np.fft.ifftn(nablasqfour))
         returned_fields['nabla_sq'] = nabla_sq
 
     if 's_sq' in fields:
-        #  TESTING
-        #tidal_field = get_tidal_field(dfour,karr,N_dim)
-        tidal_field = np.real(np.fft.ifftn(get_tidal_field(dfour,karr,N_dim), axes = (0, 1, 2)))
+        tfour = get_tidal_field(dfour,karr,N_dim)
+        tidal_field = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
         s_sq = np.sum(tidal_field**2,axis=(3,4))
         returned_fields['s_sq'] = s_sq
 
     return returned_fields
-
 
 def get_nabla_sq(dfour,karr,N_dim):
     # construct ksq
@@ -78,11 +89,8 @@ def get_nabla_sq(dfour,karr,N_dim):
 
     # compute nabla squared of delta in Fourier space
     nablasqfour = -ksq*dfour
-
-    # transform to real space
-    nablasq = np.real(np.fft.ifftn(nablasqfour))
     
-    return nablasq
+    return nablasqfour
 
 # This code has been tested before in D. Alonso, B. Hadzhiyska, and M. Strauss (2014/5)
 @jit(nopython=True)
@@ -95,7 +103,6 @@ def get_tidal_field(dfour,karr,N_dim):
         for b in range(N_dim):
             for c in range(N_dim):
                 if (a, b, c) == (0, 0, 0):
-                    #phifour[a, b, c] = 0.
                     pass
                 else:
                     ksq = karr[a]**2 + karr[b]**2 + karr[c]**2
@@ -110,10 +117,7 @@ def get_tidal_field(dfour,karr,N_dim):
                     tfour[a, b, c, 1, 2] = karr[b]*karr[c]*dfour[a, b, c]/ksq
                     tfour[a, b, c, 2, 1] = tfour[a, b, c, 1, 2]
 
-    # TESTING
-    #tidt = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
-    tidt = tfour
-    return tidt
+    return tfour
 
 def get_density(pos,weights=None,N_dim=256,Lbox=205.):
     # x, y, and z position

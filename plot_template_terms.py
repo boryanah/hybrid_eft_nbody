@@ -22,9 +22,10 @@ labels = []
 for i in range(5):
     for j in range(5):
         if j < i: continue
+        label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
+        labels.append(label)
         
-        labels.append(r'$\langle '+fields[i]+","+fields[j]+r" \rangle$")
-
+        
 nrow = 1
 ncol = 3
 ncurve = len(k_lengths)
@@ -35,21 +36,27 @@ plt.subplots(nrow,ncol,figsize=(16,5))
 for i in range(ncurve):
     i_plot = int(i//nperplot)
     plt.subplot(1,3,i_plot+1)
-
+    label = labels[i]
+    
     start = k_starts[i]
     size = k_lengths[i]
 
     Pk = Pk_all[start:start+size]
     ks = ks_all[start:start+size]
-    
+
+    '''
+    if 'nabla' in label:
+        print(Pk)
+    '''
     if i % nperplot == 0:
         plt.errorbar(ks,Pk_true,yerr=Pk_err,color='black',label='halo-halo',zorder=1)
-    plt.plot(ks,Pk,label=labels[i])
+    plt.plot(ks,Pk,label=label)
 
     plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
     plt.ylabel(r"$P(k)$")
     plt.xscale('log')
     plt.yscale('log')
+    plt.xlim([1.e-2,2.])
     plt.legend()
 
 plt.savefig("figs/Pk_template.png")
