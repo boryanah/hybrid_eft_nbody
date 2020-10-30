@@ -10,7 +10,9 @@ def CompensateTSC(w, v):
 
 def get_mesh_list(pos_parts,ones,delta,delta_sq,nabla_sq,s_sq,lagr_pos,Lbox,N_dim,interlaced):
     # get i, j, k for position on the density array
-    lagr_ijk = ((lagr_pos/Lbox+0.5)*N_dim).astype(int)%N_dim
+    # TODO: fix
+    #lagr_ijk = ((lagr_pos/Lbox+0.5)*N_dim).astype(int)%N_dim
+    lagr_ijk = ((lagr_pos/Lbox)*N_dim).astype(int)%N_dim
 
     # compute the weights for each particle
     weights_ones     = ones[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
@@ -23,9 +25,9 @@ def get_mesh_list(pos_parts,ones,delta,delta_sq,nabla_sq,s_sq,lagr_pos,Lbox,N_di
     mesh_ones     = get_mesh(pos_parts,weights_ones,N_dim,Lbox,interlaced)
     mesh_delta    = get_mesh(pos_parts,weights_delta,N_dim,Lbox,interlaced)
     mesh_delta_sq = get_mesh(pos_parts,weights_delta_sq,N_dim,Lbox,interlaced)
-    mesh_s_sq     = get_mesh(pos_parts,weights_s_sq,N_dim,Lbox,interlaced)
     mesh_nabla_sq = get_mesh(pos_parts,weights_nabla_sq,N_dim,Lbox,interlaced)
-    mesh_list = [mesh_ones,mesh_delta,mesh_delta_sq,mesh_s_sq,mesh_nabla_sq]
+    mesh_s_sq     = get_mesh(pos_parts,weights_s_sq,N_dim,Lbox,interlaced)
+    mesh_list = [mesh_ones,mesh_delta,mesh_delta_sq,mesh_nabla_sq,mesh_s_sq]
 
     return mesh_list
 
@@ -34,7 +36,7 @@ def get_mesh(pos_parts,weights_this,N_dim,Lbox,interlaced):
     # create nbodykit objects for all fields
     this_field = {}
     this_field['Position'] = pos_parts
-    this_field['Weights'] = weights_this
+    this_field['Weight'] = weights_this
     cat = ArrayCatalog(this_field)
     mesh_this = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
     compensation = CompensateTSC#mesh_this.CompensateTSC
@@ -45,7 +47,7 @@ def get_mesh(pos_parts,weights_this,N_dim,Lbox,interlaced):
 def get_cross_ps(first_mesh,second_mesh):
     r_first_second = FFTPower(first=first_mesh, second=second_mesh, mode='1d')#, dk=0.005, kmin=0.01)   
     Pk_first_second = r_first_second.power['power']#.real
-    ks = r_first_second.power['k'] # [kpc/h]^-1
+    ks = r_first_second.power['k'] # [Mpc/h]^-1
     return ks, Pk_first_second
 
 def predict_Pk(f_params,ks_all,Pk_all,k_lengths):

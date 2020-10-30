@@ -24,7 +24,6 @@ print(ic_fns,snap_fns,fof_fns)
 
 # return position of the particles and halos
 lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
-
 ks, Pk_true = get_Pk_true(pos_halo,N_dim,Lbox,interlaced)
 
 Pk = np.zeros((len(ks),N_jack**3))
@@ -50,6 +49,8 @@ for i_x in range(N_jack):
 Pk_mean = np.mean(Pk,axis=1)
 Pk_err = np.sqrt(N_jack**3-1)*np.std(Pk,axis=1)
 
+np.save("data/ks.npy",ks)
+np.save("data/Pk_true.npy",Pk_true)
 np.save("data/Pk_true_mean.npy",Pk_mean)
 np.save("data/Pk_true_err.npy",Pk_err)
 

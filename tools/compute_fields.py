@@ -2,6 +2,8 @@ import numpy as np
 import numpy.linalg as la
 import pyccl as ccl
 import os
+from numba import jit
+import numba as nb 
 
 def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
     # load the density field
@@ -36,7 +38,10 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
         s_sq = np.load(data_dir+"s_sq_%d.npy"%(int(R_smooth)))
     else:
         # compute fields
-        nabla_sq, s_sq = get_fields(delta, Lbox, N_dim, fields=["nabla_sq","s_sq"])
+        nabla_s = get_nabla_s(delta, Lbox, N_dim, fields=['nabla_sq','s_sq'])
+        nabla_sq = nabla_s['nabla_sq']
+        s_sq = nabla_s['s_sq']
+        
         # subtract means
         nabla_sq -= np.mean(nabla_sq)
         s_sq -= np.mean(s_sq)
@@ -45,21 +50,23 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
 
     return ones, delta, delta_sq, nabla_sq, s_sq
 
-def get_fields(delta,Lbox,N_dim,fields):
+def get_nabla_s(delta,Lbox,N_dim,fields):
     # construct wavenumber array
     karr = np.fft.fftfreq(N_dim, d=Lbox/(2*np.pi*N_dim))
     dfour = np.fft.fftn(delta)
 
     # fields to return
-    returned_fields = []
+    returned_fields = {}
     if 'nabla_sq' in fields:
         nabla_sq = get_nabla_sq(dfour,karr,N_dim)
-        returned_fields.append(nabla_sq)
+        returned_fields['nabla_sq'] = nabla_sq
 
     if 's_sq' in fields:
-        tidal_field = get_tidal_field(dfour,karr,N_dim)
+        #  TESTING
+        #tidal_field = get_tidal_field(dfour,karr,N_dim)
+        tidal_field = np.real(np.fft.ifftn(get_tidal_field(dfour,karr,N_dim), axes = (0, 1, 2)))
         s_sq = np.sum(tidal_field**2,axis=(3,4))
-        returned_fields.append(s_sq)
+        returned_fields['s_sq'] = s_sq
 
     return returned_fields
 
@@ -78,8 +85,9 @@ def get_nabla_sq(dfour,karr,N_dim):
     return nablasq
 
 # This code has been tested before in D. Alonso, B. Hadzhiyska, and M. Strauss (2014/5)
+@jit(nopython=True)
 def get_tidal_field(dfour,karr,N_dim):
-    tfour = np.zeros(shape=(N_dim, N_dim, N_dim, 3, 3),dtype=complex)
+    tfour = np.zeros(shape=(N_dim, N_dim, N_dim, 3, 3),dtype=nb.complex128)
     
     # computing tidal tensor and phi in fourier space
     # and smoothing using the window functions
@@ -101,8 +109,10 @@ def get_tidal_field(dfour,karr,N_dim):
                     tfour[a, b, c, 0, 2] = tfour[a, b, c, 2, 0]
                     tfour[a, b, c, 1, 2] = karr[b]*karr[c]*dfour[a, b, c]/ksq
                     tfour[a, b, c, 2, 1] = tfour[a, b, c, 1, 2]
-    
-    tidt = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
+
+    # TESTING
+    #tidt = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
+    tidt = tfour
     return tidt
 
 def get_density(pos,weights=None,N_dim=256,Lbox=205.):
@@ -146,7 +156,7 @@ def get_smooth_density(D,R=4.,N_dim=256,Lbox=205.,return_lambda=False):
     drsmo = np.real(np.fft.ifftn(dksmo))
     return drsmo
 
-
+@jit(nopython=True)
 def get_eig(tidt,N_dim):
     evals = np.zeros(shape=(N_dim, N_dim, N_dim, 3))
 

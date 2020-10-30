@@ -76,18 +76,34 @@ elif simulation_code == 'gadget':
 print("Obtained positions and snapshots")
 
 # user choices
+ppd = 256# todo: repeat
 N_dim = ppd # particle mesh size
 interlaced = True
-R_smooth = 4.
+R_smooth = 4./2
+k_max = 1.
+data_dir = "data/"# TODO: change
 
-# obtain the truth
-ks, Pk_true = get_Pk_true(pos_halo,N_dim,Lbox,interlaced)
-Pk_true = Pk_true.astype(np.float64)
-print("Computed true power spectrum")
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
 
+if os.path.exists(data_dir+"Pk_true_mean.npy"):#todo
+    Pk_true = np.load(data_dir+"Pk_true_mean.npy")
+    ks = np.load(data_dir+"ks.npy")
+else:
+    # obtain the truth
+    ks, Pk_true = get_Pk_true(pos_halo,N_dim,Lbox,interlaced)
+    Pk_true = Pk_true.astype(np.float64)
+    print("Computed true power spectrum")
+    
 # load errors computed through jackknifing
-# TODO: make it part of the module
-Pk_err = np.load("data/Pk_true_err.npy")
+# TODO: make it part of the module i.e. if not exist, compute
+Pk_err = np.load(data_dir+"Pk_true_err.npy")
+
+# apply cuts to the data
+k_cut = ks < k_max
+Pk_true = Pk_true[k_cut]
+Pk_err = Pk_err[k_cut]
+ks = ks[k_cut]
 
 # covariance matrix
 cov = np.diag(Pk_err)
@@ -95,33 +111,40 @@ cov[0,0] = 1.
 icov = np.linalg.inv(cov)
 icov[0,0] = 1.e6
 
-# load the 5 fields
-ones, delta, delta_sq, nabla_sq, s_sq = load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody)
-print("Loaded all fields")
-
-# create mesh list for the 5 fields
-mesh_list = get_mesh_list(pos_snap,ones,delta,delta_sq,nabla_sq,s_sq,lagr_pos,Lbox,N_dim,interlaced)
-print("Obtained mesh lists for all fields")
-
 # compute all 15 combinations
-if os.path.exists(data_dir+"Pk_all.npy"):
+if False:#os.path.exists(data_dir+"Pk_all_%d.npy"%(int(R_smooth))):
     ks_all = np.load(data_dir+"ks_all.npy")
-    Pk_all = np.load(data_dir+"Pk_all_real.npy")
+    Pk_all = np.load(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)))
     k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 else:
+    # load the 5 fields
+    ones, delta, delta_sq, nabla_sq, s_sq = load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody)
+    print("Loaded all fields")
+
+    # create mesh list for the 5 fields
+    mesh_list = get_mesh_list(pos_snap,ones,delta,delta_sq,nabla_sq,s_sq,lagr_pos,Lbox,N_dim,interlaced)
+    print("Obtained mesh lists for all fields")
+
+    # compute all cross power spectra
     ks_all, Pk_all, k_lengths = get_all_cross_ps(mesh_list)
+    np.save(data_dir+"Pk_all_%d.npy"%(int(R_smooth)),Pk_all)
+    Pk_all = Pk_all.astype(np.float64)
     np.save(data_dir+"ks_all.npy",ks_all)
-    np.save(data_dir+"Pk_all.npy",Pk_all)
-    np.save(data_dir+"Pk_all_real.npy",Pk_all.astype(np.float64))
+    np.save(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)),Pk_all)
     np.save(data_dir+"k_lengths.npy",k_lengths)
 print("Loaded all templates")
 
 def calculate_chi2(f_i):
+    # predict Pk for given bias params
     Pk = predict_Pk(f_i,ks_all,Pk_all,k_lengths)
-    dPk = Pk-Pk_true
+    
+    # apply the k-space cuts
+    Pk = Pk[k_cut]
 
+    # compute chi2
+    dPk = Pk-Pk_true
     chi2 = np.dot(dPk,np.dot(icov,dPk))
-    print("chi2 = ",chi2)
+    #print("chi2 = ",chi2)
     return chi2
 
 # initial choice for bias parameters: F_i = {1,b_1,b_2,b_nabla,b_s}
@@ -129,22 +152,27 @@ b_1 = 1.2
 b_2 = 0.4
 b_nabla = 0.1
 b_s = 0.2
-f_params = np.array([b_1, b_2, b_s, b_nabla])
+f_params = np.array([b_1, b_2, b_nabla, b_s])
 
 # minimize to get parameters
 x0 = f_params
 xtol = 1.e-6
-res = minimize(calculate_chi2, x0, method='powell',\
+res = minimize(calculate_chi2, x0, method='nelder-mead',\
                options={'xtol': xtol, 'disp': True})
 
 f_best = res.x
 print(f_best)
+
 Pk_best = predict_Pk(f_best,ks_all,Pk_all,k_lengths)
+# apply the k-space cuts
+Pk_best = Pk_best[k_cut]
 
 plt.errorbar(ks,Pk_true,yerr=Pk_err,color='black',label='halo-halo',zorder=1)
 plt.plot(ks,Pk_best,color='dodgerblue',label='EFT-Hybrid',zorder=2)
 plt.xscale('log')
 plt.yscale('log')
+plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
+plt.ylabel(r"$P(k)$")
 plt.legend()
 plt.savefig("figs/Pk_fit.png")
 plt.show()

@@ -76,8 +76,10 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     intersect, comm1, comm2 = np.intersect1d(id_ic,id_snap,return_indices=True)
 
     # reorder so that they are matching [1,2,3,...,Npart-1]
-    pos_ic = pos_ic[comm1]
-    pos_snap = pos_snap[comm2]
+    #pos_ic = pos_ic[comm1]
+    #pos_snap = pos_snap[comm2]
+    i_sort_snap = np.argsort(id_snap)
+    pos_snap = pos_snap[i_sort_snap]
     
     # TODO: it is more efficient to just order both in ascending order (in fact IC always ascending)
     
@@ -90,7 +92,7 @@ def main():
     # get the coarse density field
     dens = get_density(directory,want_show=True)
     np.save("../data/density.npy",dens)
-
+    
     # find all files
     ic_fns = sorted(glob.glob(directory+"ic_*"))
     snap_fns = sorted(glob.glob(directory+"snap_*"))
@@ -101,6 +103,5 @@ def main():
 
     # return position of the particles and halos
     pos_ic, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
-
-
+    
 
