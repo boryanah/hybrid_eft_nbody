@@ -10,7 +10,7 @@ def CompensateTSC(w, v):
         v = v / tmp
         return v
 
-
+machine = 'NERSC'#'alan'#'NERSC'
 interlaced = True
 window = 'TSC'
 Lbox = 175.
@@ -20,13 +20,20 @@ k_ny = np.pi * N_dim / Lbox
 
 #pos_parts = np.vstack((np.random.rand(50000),np.random.rand(50000),np.random.rand(50000))).T*Lbox
 #pos_parts_other = np.vstack((np.random.rand(50000),np.random.rand(50000),np.random.rand(50000))).T*Lbox
-directory = "/mnt/gosling1/boryanah/small_box_damonge/"
-data_dir = "data/"
-pos_ic = np.load(directory+"pos_ic.npy")
+
+
+if machine == 'NERSC':
+    directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+    data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"
+elif machine == 'alan':
+    directory = "/mnt/gosling1/boryanah/small_box_damonge/"
+    data_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/"
+pos_ic = np.load(data_dir+"pos_ic.npy")
+#nabla_sq = np.load(data_dir+"density.npy")
 nabla_sq = np.load(data_dir+"nabla_sq_4.npy")
 #nabla_sq = np.load(data_dir+"delta_sq_4.npy")
-pos_halo = np.load(directory+"pos_halo.npy")
-pos_parts = np.load(directory+"pos_snap.npy")
+pos_halo = np.load(data_dir+"pos_halo.npy")
+pos_parts = np.load(data_dir+"pos_snap.npy")
 
 pos_ijk = (pos_ic/gr_size).astype(int)%N_dim
 weights = nabla_sq[pos_ijk[:,0],pos_ijk[:,1],pos_ijk[:,2]]
@@ -80,6 +87,7 @@ plt.axvline(x=k_ny, c='k', ls='--')
 plt.xscale('log')
 plt.yscale('log')
 plt.legend()
+plt.savefig("figs/Pk_test.png")
 plt.show()
 
 '''

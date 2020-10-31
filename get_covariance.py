@@ -12,8 +12,14 @@ interlaced = True
 ind_snap = 0
 N_jack = 3
 
+machine = 'NERSC'
 # directory of simulation
-directory = "/mnt/gosling1/boryanah/small_box_damonge/"#"/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+if machine == 'NERSC':
+    directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+    data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"
+elif machine == 'alan':
+    directory = "/mnt/gosling1/boryanah/small_box_damonge/"
+    data_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/"
 
 # find all files
 ic_fns = sorted(glob.glob(directory+"ic_*"))
@@ -49,10 +55,10 @@ for i_x in range(N_jack):
 Pk_mean = np.mean(Pk,axis=1)
 Pk_err = np.sqrt(N_jack**3-1)*np.std(Pk,axis=1)
 
-np.save("data/ks.npy",ks)
-np.save("data/Pk_true.npy",Pk_true)
-np.save("data/Pk_true_mean.npy",Pk_mean)
-np.save("data/Pk_true_err.npy",Pk_err)
+np.save(data_dir+"ks.npy",ks)
+np.save(data_dir+"Pk_true.npy",Pk_true)
+np.save(data_dir+"Pk_true_mean.npy",Pk_mean)
+np.save(data_dir+"Pk_true_err.npy",Pk_err)
 
 plt.plot(ks,Pk_true,'k')
 plt.errorbar(ks,Pk_mean,yerr=Pk_err,color='dodgerblue')

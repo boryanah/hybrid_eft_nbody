@@ -11,8 +11,8 @@ from tools.power_spectrum import get_all_cross_ps, get_mesh_list, predict_Pk, ge
 #from tools.read_abacus import read_abacus
 from tools.read_gadget import read_gadget
 
-simulation_code = 'precomputed'#'gadget'#'abacus'
-machine = 'alan'#'NERSC'
+simulation_code = 'gadget'#'precomputed'#'gadget'#'abacus'
+machine = 'NERSC'#'alan'#'NERSC'
 
 if simulation_code == 'abacus':
     # simulation name, see https://abacussummit.readthedocs.io/en/latest/simulations.html
@@ -44,10 +44,12 @@ if simulation_code == 'abacus':
     cosmo = ccl.Cosmology(n_s=n_s, sigma8=sigma8_m, h=h, Omega_c=Omega_c, Omega_b=Omega_b)
 
     if machine == 'alan':
+        data_dir = "/mnt/store1/boryanah/data_hybrid/abacus/"
         dens_dir = "/mnt/store1/boryanah/ICs/density.npy"
     elif machine == 'NERSC':
         data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"
-
+        dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/density.npy"
+        
 elif simulation_code == 'gadget':
     # simulation parameters
     Lbox = 175.#Mpc/h
@@ -61,10 +63,6 @@ elif simulation_code == 'gadget':
     Omega_b = 0.045
     h = 0.7
     sigma8_m = 0.8
-    
-    # directory where the data is saved
-    dens_dir = "data/density.npy"
-    data_dir = "data/"
 
     # create CCL cosmology object
     cosmo = ccl.Cosmology(n_s=n_s, sigma8=sigma8_m, h=h, Omega_c=Omega_c, Omega_b=Omega_b)
@@ -72,9 +70,13 @@ elif simulation_code == 'gadget':
     # directory of simulation
     if machine == 'alan':
         directory = "/mnt/gosling1/boryanah/small_box_damonge/"
+        data_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/"
+        dens_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/density.npy"
     elif machine == 'NERSC':
         directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
-
+        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"
+        dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/density.npy"
+        
     # find all files
     ic_fns = sorted(glob.glob(directory+"ic_*"))
     snap_fns = sorted(glob.glob(directory+"snap_*"))
@@ -91,7 +93,7 @@ interlaced = True
 R_smooth = 2.
 k_max = 0.5
 k_min = 0.05 # why is nothing else working?
-data_dir = "data/"# TODO: change
+data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"# TODO: change
 N_dim = 256 # particle mesh size; usually ppd
 N_halo = 41130 #TODO: change
 Lbox = 175. #TODO: change

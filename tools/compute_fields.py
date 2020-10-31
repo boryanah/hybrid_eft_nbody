@@ -42,7 +42,7 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
     if os.path.exists(data_dir+"s_sq_%d.npy"%(int(R_smooth))):    
         s_sq = np.load(data_dir+"s_sq_%d.npy"%(int(R_smooth)))
     else:
-        fields_missing.append('nabla_sq')
+        fields_missing.append('s_sq')
 
     # compute fields
     if len(fields_missing) > 0:

@@ -84,12 +84,18 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     return pos_ic, pos_snap, pos_halo
 
 def main():
-    # directory of simulation
-    directory = "/mnt/gosling1/boryanah/small_box_damonge/"#"/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+    machine = 'NERSC'#'alan'
+
+    if machine == 'NERSC':
+        directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
+        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"
+    elif machine == 'alan':
+        directory = "/mnt/gosling1/boryanah/small_box_damonge/"
+        data_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/"
 
     # get the coarse density field
     dens = get_density(directory,want_show=True)
-    np.save("../data/density.npy",dens)
+    np.save(data_dir+"density.npy",dens)
     
     # find all files
     ic_fns = sorted(glob.glob(directory+"ic_*"))
@@ -101,5 +107,7 @@ def main():
 
     # return position of the particles and halos
     pos_ic, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
-    
+    np.save(data_dir+"pos_ic.npy",pos_ic)
+    np.save(data_dir+"pos_snap.npy",pos_snap)
+    np.save(data_dir+"pos_halo.npy",pos_halo)
 
