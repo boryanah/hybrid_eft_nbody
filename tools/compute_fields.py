@@ -5,42 +5,38 @@ import os
 from numba import jit
 import numba as nb 
 
-def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
+def load_fields(dens_dir,R_smooth,N_dim,Lbox,z_nbody):
     # load the density field
-    density_ic = np.load(dens_dir)
+    density_ic = np.load(dens_dir+"density.npy")
     
-    # scale the density as suggested in Modi et al.
-    D_z = ccl.growth_factor(cosmo,1./(1+z_nbody))
-    density_scaled = D_z*density_ic
-
     # smooth field
-    if os.path.exists(data_dir+"density_smooth_%d.npy"%(int(R_smooth))):
-        density_smooth = np.load(data_dir+"density_smooth_%d.npy"%(int(R_smooth)))
+    if os.path.exists(dens_dir+"density_smooth_%d.npy"%(int(R_smooth))):
+        density_smooth = np.load(dens_dir+"density_smooth_%d.npy"%(int(R_smooth)))
     else:
-        density_smooth = get_smooth_density(density_scaled,R=R_smooth,N_dim=N_dim,Lbox=Lbox)
-        np.save(data_dir+"density_smooth_%d.npy"%(int(R_smooth)),density_smooth)
+        density_smooth = get_smooth_density(density_ic,R=R_smooth,N_dim=N_dim,Lbox=Lbox)
+        np.save(dens_dir+"density_smooth_%d.npy"%(int(R_smooth)),density_smooth)
 
     # the fields are i = {1,delta,delta^2,nabla^2 delta,s^2} 
-    ones = np.ones(density_scaled.shape)
+    ones = np.ones(density_ic.shape)
     delta = density_smooth
 
-    if os.path.exists(data_dir+"delta_sq_%d.npy"%(int(R_smooth))):
-        delta_sq = np.load(data_dir+"delta_sq_%d.npy"%(int(R_smooth)))
+    if os.path.exists(dens_dir+"delta_sq_%d.npy"%(int(R_smooth))):
+        delta_sq = np.load(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)))
     else:
         # compute field
         delta_sq = delta**2
         # subtract mean
         delta_sq -= np.mean(delta_sq)
-        np.save(data_dir+"delta_sq_%d.npy"%(int(R_smooth)),delta_sq)
+        np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),delta_sq)
 
     fields_missing = []
-    if os.path.exists(data_dir+"nabla_sq_%d.npy"%(int(R_smooth))):
-        nabla_sq = np.load(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)))
+    if os.path.exists(dens_dir+"nabla_sq_%d.npy"%(int(R_smooth))):
+        nabla_sq = np.load(dens_dir+"nabla_sq_%d.npy"%(int(R_smooth)))
     else:
         fields_missing.append('nabla_sq')
 
-    if os.path.exists(data_dir+"s_sq_%d.npy"%(int(R_smooth))):    
-        s_sq = np.load(data_dir+"s_sq_%d.npy"%(int(R_smooth)))
+    if os.path.exists(dens_dir+"s_sq_%d.npy"%(int(R_smooth))):    
+        s_sq = np.load(dens_dir+"s_sq_%d.npy"%(int(R_smooth)))
     else:
         fields_missing.append('s_sq')
 
@@ -50,13 +46,13 @@ def load_fields(cosmo,dens_dir,data_dir,R_smooth,N_dim,Lbox,z_nbody):
         try:
             nabla_sq = fields_dict['nabla_sq']
             nabla_sq -= np.mean(nabla_sq)
-            np.save(data_dir+"nabla_sq_%d.npy"%(int(R_smooth)),nabla_sq)
+            np.save(dens_dir+"nabla_sq_%d.npy"%(int(R_smooth)),nabla_sq)
         except:
             pass
         try:
             s_sq = fields_dict['s_sq']
             s_sq -= np.mean(s_sq)
-            np.save(data_dir+"s_sq_%d.npy"%(int(R_smooth)),s_sq)
+            np.save(dens_dir+"s_sq_%d.npy"%(int(R_smooth)),s_sq)
         except:
             pass
 

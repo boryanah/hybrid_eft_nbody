@@ -1,14 +1,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+# user choices
 R_smooth = 2.
+z_nbody = 1.
+simulation_code = 'gadget'
+machine = 'alan'
 
-data_dir = "data/"
+if simulation_code == 'abacus':
+    sim_name = "AbacusSummit_hugebase_c000_ph000"#small/AbacusSummit_small_c000_ph3046
+    if machine == 'alan':
+        data_dir = "/mnt/store1/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
+    elif machine == 'NERSC':
+        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
+elif simulation_code == 'gadget':
+    sim_name = "Sim256"    
+    if machine == 'alan':
+        data_dir = "/mnt/gosling1/boryanah/"+sim_name+"/z%.3f/"%z_nbody
+    elif machine == 'NERSC':
+        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
 
-Pk_true = np.load(data_dir+"Pk_true_mean.npy")
+
+Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
 ks = np.load(data_dir+"ks.npy")
-Pk_err = np.load(data_dir+"Pk_true_err.npy")
+Pk_err = np.load(data_dir+"Pk_hh_err.npy")
 
 ks_all = np.load(data_dir+"ks_all.npy")
 Pk_all = np.load(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)))
@@ -44,12 +59,8 @@ for i in range(ncurve):
     Pk = Pk_all[start:start+size]
     ks = ks_all[start:start+size]
 
-    '''
-    if 'nabla' in label:
-        print(Pk)
-    '''
     if i % nperplot == 0:
-        plt.errorbar(ks,Pk_true,yerr=Pk_err,color='black',label='halo-halo',zorder=1)
+        plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='hh',zorder=1)
     plt.plot(ks,Pk,label=label)
 
     plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")

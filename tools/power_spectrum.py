@@ -97,21 +97,33 @@ def get_all_cross_ps(mesh_list):
     k_lengths = np.array(k_lengths,dtype=int)
     return ks_all, Pk_all, k_lengths
 
-def get_Pk_true(pos_true,N_dim,Lbox,interlaced):
-    # calculate power spectrum of the galaxies or halos
-    galaxies = {}
-    galaxies['Position'] = pos_true
+def get_Pk(pos1,N_dim,Lbox,interlaced,pos2=None):
+    # calculate power spectrum of the first or halos
+    first = {}
+    first['Position'] = pos1
 
     # create mesh object
-    cat = ArrayCatalog(galaxies)
-    mesh_true = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
-    compensation = CompensateTSC # mesh_true.CompensateTSC not working
-    mesh_true = mesh_true.apply(compensation, kind='circular', mode='complex')
+    cat = ArrayCatalog(first)
+    mesh1 = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
+    compensation = CompensateTSC # mesh1.CompensateTSC not working
+    mesh1 = mesh1.apply(compensation, kind='circular', mode='complex')
 
+    if pos2 is None:
+        mesh2 = None
+    else:
+        second = {}
+        second['Position'] = pos2
+
+        # create mesh object
+        cat = ArrayCatalog(second)
+        mesh2 = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
+        compensation = CompensateTSC # mesh2.CompensateTSC not working
+        mesh2 = mesh2.apply(compensation, kind='circular', mode='complex')
+    
     # obtain the "truth"
-    r_true = FFTPower(mesh_true, mode='1d')
-    ks = r_true.power['k']
-    Pk_true = r_true.power['power']#.real
+    r = FFTPower(first=mesh1, second=mesh2, mode='1d')
+    ks = r.power['k']
+    Pk = r.power['power']#.real
 
-    return ks, Pk_true
+    return ks, Pk
 

@@ -110,4 +110,3 @@ def main():
     np.save(data_dir+"pos_ic.npy",pos_ic)
     np.save(data_dir+"pos_snap.npy",pos_snap)
     np.save(data_dir+"pos_halo.npy",pos_halo)
-
