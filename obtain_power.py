@@ -11,61 +11,23 @@ from nbodykit.source.catalog import FITSCatalog
 
 from tools.power_spectrum import get_Pk
 from tools.read_abacus import read_abacus
+from load_dictionary import load_dict
 
 def get_power():
 
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
-    #sim_code = 'abacus'
-    sim_code = 'gadget'
+    #sim_name = 'AbacusSummit_hugebase_c000_ph000'
+    sim_name = 'Sim256'
     
-    if sim_code == 'abacus':
-        # user choices: abacus
-        sim_name = "AbacusSummit_hugebase_c000_ph000"
-        interlaced = True
-        R_smooth = 2.
-        N_dim = 2304 # particle mesh size; usually ppd
-        ppd = 2304 # particle per dimension in the sim
-        z_nbody = 1. # redshift where we measure power spectrum
-        Lbox = 2000. # box size of the simulation [Mpc/h]
-        n_chunks = 20
-
-        # cosmological parameters: abacus
-        h = 0.6736
-        n_s = 0.9649
-        Omega_b = 0.02237/h**2
-        Omega_c = 0.12/h**2
-        sigma8_m = 0.807952
-
-    elif sim_code == 'gadget':
-        # user choices: gadget
-        sim_name = 'Sim256'
-        interlaced = True
-        R_smooth = 2.
-        ind_snap = 0; z_nbody = 1.
-        N_dim = 256 # particle mesh size; usually ppd
-        Lbox = 175.#Mpc/h
-        ppd = 256
-
-        # cosmological parameters: gadget
-        n_s = 0.96
-        Omega_c = 0.655
-        Omega_b = 0.045
-        h = 0.7
-        sigma8_m = 0.8
-
-    if sim_code == 'abacus':
-        if machine == 'alan':
-            data_dir = "/mnt/store1/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-        elif machine == 'NERSC':
-            data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-    elif sim_code == 'gadget':
-        if machine == 'alan':
-            data_dir = "/mnt/gosling1/boryanah/"+sim_name+"/z%.3f/"%z_nbody
-        elif machine == 'NERSC':
-            data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
-    
+    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    interlaced = user_dict['interlaced']
+    data_dir = user_dict['data_dir']
+    R_smooth = user_dict['R_smooth']
+    n_chunks = user_dict['n_chunks']
+    N_dim = user_dict['N_dim']
+    Lbox = user_dict['Lbox']
     
     # load simulation information; 
     pos_halo_fns = sorted(glob.glob(data_dir+"pos_halo_*"))

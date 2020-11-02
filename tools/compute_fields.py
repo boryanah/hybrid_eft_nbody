@@ -59,7 +59,9 @@ def load_fields(dens_dir,R_smooth,N_dim,Lbox):
         except:
             pass
 
-    return {'ones': ones, 'delta': delta, 'delta_sq': delta_sq, 'nabla_sq': nabla_sq, 's_sq': s_sq}
+    fields_dict = {'ones': ones, 'delta': delta, 'delta_sq': delta_sq, 'nabla_sq': nabla_sq, 's_sq': s_sq}
+    factors_dict = {'delta': 1., 'delta_sq': 2., 'nabla_sq': 1., 's_sq': 2.}
+    return fields_dict, factors_dict
 
 def get_nabla_sq_s_sq(delta,Lbox,N_dim,fields):
     # construct wavenumber array
