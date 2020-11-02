@@ -1,6 +1,31 @@
 import numpy as np
 from nbodykit.lab import *
 
+from nbodykit.io.base import FileType
+from nbodykit.source.catalog.file import FileCatalogFactory
+from nbodykit.source.catalog import FITSCatalog
+
+
+class NPYFile(FileType):
+    """
+    A file-like object to read np ``.npy`` files
+    """
+    def __init__(self, path):
+        self.path = path
+        self.attrs = {}
+        self._data = np.load(self.path)
+        self.size = len(self._data) # total size
+        self.dtype = self._data.dtype # data dtype
+
+    def read(self, columns, start, stop, step=1):
+        """
+        Read the specified column(s) over the given range
+        """
+        return self._data[start:stop:step]
+
+#NPYCatalog = FileCatalogFactory('NPYCatalog', NPYFile)
+#cat = NPYCatalog(pos_parts_fns)
+
 def CompensateTSC(w, v):
     for i in range(3):
         wi = w[i]
@@ -8,50 +33,16 @@ def CompensateTSC(w, v):
         v = v / tmp
         return v
 
-def get_mesh_list(pos_parts,ones,delta,delta_sq,nabla_sq,s_sq,lagr_pos,Lbox,N_dim,interlaced):
-    # get i, j, k for position on the density array
-    lagr_ijk = ((lagr_pos/Lbox)*N_dim).astype(int)%N_dim
+def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced):
 
-    # compute the weights for each particle
-    weights_ones     = ones[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
-    weights_delta    = delta[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
-    weights_delta_sq = delta_sq[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
-    weights_nabla_sq = nabla_sq[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
-    weights_s_sq     = s_sq[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
-
-    # normalize (shouldn't matter, but it does)
-    weights_ones     /= np.sum(weights_ones)
-    weights_delta    /= np.sum(weights_delta)
-    weights_delta_sq /= np.sum(weights_delta_sq)
-    weights_nabla_sq /= np.sum(weights_nabla_sq)
-    weights_s_sq     /= np.sum(weights_s_sq)
+    # create catalog from fitsfile
+    cat = FITSCatalog(pos_parts_fns, ext='Data') 
     
-    # get all meshes
-    mesh_ones     = get_mesh(pos_parts,weights_ones,N_dim,Lbox,interlaced)
-    mesh_delta    = get_mesh(pos_parts,weights_delta,N_dim,Lbox,interlaced)
-    mesh_delta_sq = get_mesh(pos_parts,weights_delta_sq,N_dim,Lbox,interlaced)
-    mesh_nabla_sq = get_mesh(pos_parts,weights_nabla_sq,N_dim,Lbox,interlaced)
-    mesh_s_sq     = get_mesh(pos_parts,weights_s_sq,N_dim,Lbox,interlaced)
-    mesh_list = [mesh_ones,mesh_delta,mesh_delta_sq,mesh_nabla_sq,mesh_s_sq]
+    mesh = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
+    compensation = CompensateTSC # mesh.CompensateTSC not working
+    mesh = mesh.apply(compensation, kind='circular', mode='complex')
 
-    #prev = mesh_nabla_sq.preview(Nmesh=N_dim,axes=(0,1,2))
-    #print(prev.shape)
-    #print(prev[:2])
-    
-    return mesh_list
-
-
-def get_mesh(pos_parts,weights_this,N_dim,Lbox,interlaced):
-    # create nbodykit objects for all fields
-    this_field = {}
-    this_field['Position'] = pos_parts
-    this_field['Weight'] = weights_this
-    cat = ArrayCatalog(this_field)
-    mesh_this = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
-    compensation = CompensateTSC # mesh_this.CompensateTSC not working
-    mesh_this = mesh_this.apply(compensation, kind='circular', mode='complex')
-
-    return mesh_this
+    return mesh
 
 def get_cross_ps(first_mesh,second_mesh):
     r_cross = FFTPower(first=first_mesh, second=second_mesh, mode='1d')#, dk=0.005, kmin=0.01)   
@@ -95,10 +86,11 @@ def get_all_cross_ps(mesh_list):
                 Pk_all = Pk_ij
                 ks_all = ks_ij
     k_lengths = np.array(k_lengths,dtype=int)
+    Pk_all = Pk_all.astype(np.float64)
+    
     return ks_all, Pk_all, k_lengths
 
-def get_Pk(pos1,N_dim,Lbox,interlaced,pos2=None):
-    # calculate power spectrum of the first or halos
+def get_Pk_arr(pos1,N_dim,Lbox,interlaced,pos2=None):
     first = {}
     first['Position'] = pos1
 
@@ -119,11 +111,25 @@ def get_Pk(pos1,N_dim,Lbox,interlaced,pos2=None):
         mesh2 = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
         compensation = CompensateTSC # mesh2.CompensateTSC not working
         mesh2 = mesh2.apply(compensation, kind='circular', mode='complex')
-    
+
     # obtain the "truth"
     r = FFTPower(first=mesh1, second=mesh2, mode='1d')
     ks = r.power['k']
-    Pk = r.power['power']#.real
+    Pk = r.power['power'].astype(np.float64)
+    return ks, Pk
+        
+def get_Pk(pos1_fns,N_dim,Lbox,interlaced,pos2_fns=None):
+    # calculate power spectrum of the galaxies or halos
+    mesh1 = get_mesh(pos1_fns,N_dim,Lbox,interlaced)
 
+    if pos2_fns is None:
+        mesh2 = None
+    else:
+        mesh2 = get_mesh(pos2_fns,N_dim,Lbox,interlaced)
+        
+    # obtain the "truth"
+    r = FFTPower(first=mesh1, second=mesh2, mode='1d')
+    ks = r.power['k']
+    Pk = r.power['power'].astype(np.float64)
     return ks, Pk
 

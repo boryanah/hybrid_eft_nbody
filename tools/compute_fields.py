@@ -5,7 +5,7 @@ import os
 from numba import jit
 import numba as nb 
 
-def load_fields(dens_dir,R_smooth,N_dim,Lbox,z_nbody):
+def load_fields(dens_dir,R_smooth,N_dim,Lbox):
     # load the density field
     density_ic = np.load(dens_dir+"density.npy")
     
@@ -16,8 +16,11 @@ def load_fields(dens_dir,R_smooth,N_dim,Lbox,z_nbody):
         density_smooth = get_smooth_density(density_ic,R=R_smooth,N_dim=N_dim,Lbox=Lbox)
         np.save(dens_dir+"density_smooth_%d.npy"%(int(R_smooth)),density_smooth)
 
+    # release that piece of memory
+    del density_ic
+    
     # the fields are i = {1,delta,delta^2,nabla^2 delta,s^2} 
-    ones = np.ones(density_ic.shape)
+    ones = np.ones([N_dim,N_dim,N_dim])
     delta = density_smooth
 
     if os.path.exists(dens_dir+"delta_sq_%d.npy"%(int(R_smooth))):
@@ -56,7 +59,7 @@ def load_fields(dens_dir,R_smooth,N_dim,Lbox,z_nbody):
         except:
             pass
 
-    return ones, delta, delta_sq, nabla_sq, s_sq
+    return {'ones': ones, 'delta': delta, 'delta_sq': delta_sq, 'nabla_sq': nabla_sq, 's_sq': s_sq}
 
 def get_nabla_sq_s_sq(delta,Lbox,N_dim,fields):
     # construct wavenumber array

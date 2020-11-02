@@ -76,7 +76,7 @@ icov[0,0] = 1.e6
 
 # load all 15 templates
 ks_all = np.load(data_dir+"ks_all.npy")
-Pk_all = np.load(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)))
+Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
 k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 
 def calculate_chi2(f_i):

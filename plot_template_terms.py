@@ -21,12 +21,12 @@ elif simulation_code == 'gadget':
         data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
 
 
-Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
+Pk_hh = np.load(data_dir+"Pk_hh.npy")
 ks = np.load(data_dir+"ks.npy")
 Pk_err = np.load(data_dir+"Pk_hh_err.npy")
 
 ks_all = np.load(data_dir+"ks_all.npy")
-Pk_all = np.load(data_dir+"Pk_all_real_%d.npy"%(int(R_smooth)))
+Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
 k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 k_starts = np.zeros(len(k_lengths),dtype=int)
 k_starts[1:] = np.cumsum(k_lengths)[:-1]
@@ -61,6 +61,7 @@ for i in range(ncurve):
 
     if i % nperplot == 0:
         plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='hh',zorder=1)
+        #plt.plot(ks,Pk_hh,color='black',label='hh',zorder=1)
     plt.plot(ks,Pk,label=label)
 
     plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")

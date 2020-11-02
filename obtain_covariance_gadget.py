@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import glob
 import numpy as np
+from astropy.io import fits
 
-from tools.power_spectrum import get_Pk
+from tools.power_spectrum import get_Pk_arr
 
 # parameters
 sim_name = 'Sim256'
@@ -22,7 +23,8 @@ elif machine == 'NERSC':
     data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
 
 # load position of the particles and halos
-pos_halo = np.load(data_dir+"pos_halo.npy")
+hdul = fits.open(data_dir+"pos_halo_000.fits")
+pos_halo = hdul[1].data['Position']
 ks = np.load(data_dir+"ks.npy")
 Pk_hh = np.load(data_dir+"Pk_hh.npy")
 
@@ -40,7 +42,7 @@ for i_x in range(N_jack):
             pos_halo_jack[bool_arr] = np.array([0.,0.,0.])
             pos_halo_jack = pos_halo_jack[np.sum(pos_halo_jack,axis=1)!=0.]
 
-            ks, Pk_jack = get_Pk(pos_halo_jack,N_dim,Lbox,interlaced)
+            ks, Pk_jack = get_Pk_arr(pos_halo_jack,N_dim,Lbox,interlaced)
             Pk_jack = Pk_jack.astype(float)
             
             Pk[:,i_x+N_jack*i_y+N_jack**2*i_z] = Pk_jack
