@@ -15,8 +15,8 @@ from load_dictionary import load_dict
 
 def get_power():
 
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
     #sim_name = 'AbacusSummit_hugebase_c000_ph000'
     sim_name = 'Sim256'

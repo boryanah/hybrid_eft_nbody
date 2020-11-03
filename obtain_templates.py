@@ -5,6 +5,9 @@ import glob
 import matplotlib.pyplot as plt
 import time
 
+from nbodykit.lab import *
+from nbodykit.utils import ScatterArray#can't broadcast
+
 from tools.compute_fields import load_fields
 from tools.power_spectrum import get_all_cross_ps, get_mesh
 from tools.read_abacus import read_abacus
@@ -12,11 +15,15 @@ from tools.read_gadget import read_gadget
 from load_dictionary import load_dict
 import fitsio
 
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 # save data
 def save_pos(pos,weight,type_pos,data_dir):
-    data = np.empty(pos.shape[0], dtype=[('Position', ('f8', 3)), ('Weight', 'f8')])
+    data = np.empty(pos.shape[0], dtype=[('Position', ('f8', 3)), ('Value', 'f8')])
     data['Position'] = pos
-    data['Weight'] = weight
+    data['Value'] = weight
     
     # write to a FITS file using fitsio
     fitsio.write(data_dir+"pos_"+type_pos+".fits", data, extname='Data')
@@ -25,8 +32,8 @@ def save_pos(pos,weight,type_pos,data_dir):
 
 def get_templates():
     
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     sim_name = 'Sim256'
@@ -52,10 +59,16 @@ def get_templates():
     D_z_nbody = ccl.growth_factor(cosmo,1./(1+z_nbody))
     D_z_ic = ccl.growth_factor(cosmo,1./(1+z_nbody))
     D_growth = D_z_nbody/D_z_ic
-    
-    # load the 5 fields, tuks
-    fields, factors = load_fields(dens_dir,R_smooth,N_dim,Lbox)
-    print("Loaded all fields")
+
+    if rank == 0:
+        # load the 5 fields
+        fields, factors = load_fields(dens_dir,R_smooth,N_dim,Lbox)
+        print("Loaded all fields")
+    else:
+        fields = None
+        factors = None
+    fields = comm.bcast(fields, root=0)
+    factors = comm.bcast(factors, root=0)
 
     # create directory if it does not exist
     if not os.path.exists(data_dir):
@@ -64,6 +77,8 @@ def get_templates():
     # loop over all chunks
     N_halo_per_file = np.zeros(n_chunks,dtype=int)
     for i_chunk in range(n_chunks):
+        if (rank-1) != i_chunk%size: continue
+        
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
             print("Data from chunk %d already saved, moving on"%i_chunk)
             continue
@@ -78,7 +93,7 @@ def get_templates():
             pos_snap += Lbox/2.
             lagr_pos += Lbox/2.
             
-        elif user['sim_code'] == 'gadget':
+        elif user_dict['sim_code'] == 'gadget':
             # find all files, todo: fix for multiple chunks
             ic_fns = sorted(glob.glob(user_dict['sim_dir']+"ic_*"))
             snap_fns = sorted(glob.glob(user_dict['sim_dir']+"snap_*"))
@@ -107,6 +122,9 @@ def get_templates():
     print("Saved all particle and halo positions")
     del fields
 
+    # wait until all data has been saved (might want to run the two separately after all) (or even split three-fold)
+    while len(glob.glob(data_dir+"pos_s_sq_snap_*.fits")) < n_chunks: time.sleep(3)
+    
     # get a mesh list for all 5 cases
     mesh_list = []
     for key in field_names:

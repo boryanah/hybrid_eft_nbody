@@ -9,7 +9,7 @@ from tools.power_spectrum import predict_Pk
 # user choices
 interlaced = True
 R_smooth = 2.
-k_max = 0.5#1.
+k_max = 0.4#1.
 k_min = 0.#0.03 # todo: figure this out!!!!!!
 z_nbody = 1.
 
@@ -38,8 +38,8 @@ elif simulation_code == 'gadget':
         data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
 
 # load power spectra
-#Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
-Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
+Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
+#Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
 #Pk_hh = np.load(data_dir+"Pk_hh.npy")
 Pk_mm = np.load(data_dir+"Pk_mm.npy")
 Pk_hm = np.load(data_dir+"Pk_hm.npy")
@@ -79,50 +79,15 @@ ks_all = np.load(data_dir+"ks_all.npy")
 Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
 k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 
-def calculate_chi2(f_i):
-    # require positivity
-    if np.sum(f_i < 0.) > 0:
-        return np.inf
-    
-    # predict Pk for given bias params
-    Pk = predict_Pk(f_i,ks_all,Pk_all,k_lengths)
+# linear solution
+Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
+Pk_all = Pk_all[:,k_cut]
+P_hat = Pk_all.T
+alpha = np.dot(np.linalg.inv(np.dot(np.dot(P_hat.T,icov),P_hat)),np.dot(np.dot(P_hat.T,icov),Pk_hh[:,None]))
 
-    # apply the k-space cuts
-    Pk = Pk[k_cut]
-    
-    if fit_type == 'ratio':
-        this = Pk/Pk_mm
-        target = rat_hh
-    elif fit_type == 'power':
-        this = Pk
-        target = Pk_hh
-    elif fit_type == 'ratio_both':
-        print("not implemented"); quit()
-    
-    # compute chi2
-    dPk = this-target
-    chi2 = np.dot(dPk,np.dot(icov,dPk))
-    return chi2
-
-# initial guess for bias parameters: F_i = {1,b_1,b_2,b_nabla,b_s}
-b_1 = 1.2
-b_2 = 0.4
-b_nabla = 0.1
-b_s = 0.2
-x0 = np.array([b_1, b_2, b_nabla, b_s])
-xtol = 1.e-6
-
-# minimize using nelder-mead, powell
-method = 'powell'
-#method = 'nelder-mead'
-res = minimize(calculate_chi2, x0, method=method,\
-               options={'xtol': xtol, 'disp': True})
-f_best = res.x
-print(f_best)
-
-# compute power spectrum for best-fit parameters
-Pk_best = predict_Pk(f_best,ks_all,Pk_all,k_lengths)
-Pk_best = Pk_best[k_cut]
+# compute power spectrum for best-fit
+Pk_best = np.dot(P_hat,alpha)
+#Pk_best = Pk_best[k_cut]
 
 # plot fit
 plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='halo-halo',zorder=1)

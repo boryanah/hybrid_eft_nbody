@@ -59,6 +59,10 @@ for i in range(ncurve):
     Pk = Pk_all[start:start+size]
     ks = ks_all[start:start+size]
 
+    if 'nabla' in label:
+        print(label,Pk)
+        Pk = np.abs(Pk)
+        
     if i % nperplot == 0:
         plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='hh',zorder=1)
         #plt.plot(ks,Pk_hh,color='black',label='hh',zorder=1)

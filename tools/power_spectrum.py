@@ -48,6 +48,9 @@ def get_cross_ps(first_mesh,second_mesh):
     r_cross = FFTPower(first=first_mesh, second=second_mesh, mode='1d')#, dk=0.005, kmin=0.01)   
     Pk_cross = r_cross.power['power']#.real
     ks = r_cross.power['k'] # [Mpc/h]^-1
+    P_sn = r_cross.attrs['shotnoise']
+    # TESTING perhaps don't subtract
+    #Pk_cross -= P_sn
     return ks, Pk_cross
 
 def predict_Pk(f_params,ks_all,Pk_all,k_lengths):
@@ -116,6 +119,8 @@ def get_Pk_arr(pos1,N_dim,Lbox,interlaced,pos2=None):
     r = FFTPower(first=mesh1, second=mesh2, mode='1d')
     ks = r.power['k']
     Pk = r.power['power'].astype(np.float64)
+    P_sn = r.attrs['shotnoise']
+    Pk -= P_sn
     return ks, Pk
         
 def get_Pk(pos1_fns,N_dim,Lbox,interlaced,pos2_fns=None):
@@ -131,5 +136,7 @@ def get_Pk(pos1_fns,N_dim,Lbox,interlaced,pos2_fns=None):
     r = FFTPower(first=mesh1, second=mesh2, mode='1d')
     ks = r.power['k']
     Pk = r.power['power'].astype(np.float64)
+    P_sn = r.attrs['shotnoise']
+    Pk -= P_sn
     return ks, Pk
 

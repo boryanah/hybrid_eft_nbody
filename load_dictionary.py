@@ -2,9 +2,6 @@
 
 def load_dict(sim_name,machine):
 
-    #machine = 'alan'
-    machine = 'NERSC'
-
     # todo read stuff from sims
     R_smooth = 2.
     z_nbody = 1.
@@ -45,8 +42,8 @@ def load_dict(sim_name,machine):
     # cosmological parameters: gadget
     cosmo_dict_gadget = {'h': 0.7,
                          'n_s': 0.96,
-                         'Omega_c': 0.655,
-                         'Omega_b': 0.045,
+                         'Omega_c': 0.26,
+                         'Omega_b': 0.04,
                          'sigma8': 0.8}
     
     
@@ -61,7 +58,8 @@ def load_dict(sim_name,machine):
                         'n_chunks': 20,
                         'data_dir': data_dir,
                         'dens_dir': dens_dir,
-                        'R_smooth': R_smooth}
+                        'R_smooth': R_smooth,
+                        'sim_code': sim_code}
 
     # user choices: gadget
     user_dict_gadget = {'sim_name': sim_name,
@@ -76,7 +74,8 @@ def load_dict(sim_name,machine):
                         'data_dir': data_dir,
                         'dens_dir': dens_dir,
                         'sim_dir': sim_dir,
-                        'R_smooth': R_smooth}
+                        'R_smooth': R_smooth,
+                        'sim_code': sim_code}
 
     
     if sim_code == 'abacus':
