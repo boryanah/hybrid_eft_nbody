@@ -1,16 +1,12 @@
 import numpy as np
 import os
 from nbodykit.lab import *
-import pyccl as ccl
-from scipy.optimize import minimize
 import glob
-import matplotlib.pyplot as plt
 import time
 
 from nbodykit.source.catalog import FITSCatalog
 
 from tools.power_spectrum import get_Pk
-from tools.read_abacus import read_abacus
 from load_dictionary import load_dict
 
 def get_power():
@@ -28,6 +24,7 @@ def get_power():
     n_chunks = user_dict['n_chunks']
     N_dim = user_dict['N_dim']
     Lbox = user_dict['Lbox']
+    dk = user_dict['dk']
     
     # load simulation information; 
     pos_halo_fns = sorted(glob.glob(data_dir+"pos_halo_*"))
@@ -41,19 +38,19 @@ def get_power():
     P_sn = 1./n_halo
 
     # obtain the hh power spectrum
-    ks, Pk_hh = get_Pk(pos_halo_fns,N_dim,Lbox,interlaced)
+    ks, Pk_hh = get_Pk(pos_halo_fns,N_dim,Lbox,interlaced,dk=dk)
     print("Computed hh power spectrum")
     np.save(data_dir+"Pk_hh.npy",Pk_hh)
     np.save(data_dir+"Pk_hh-sn.npy",Pk_hh-P_sn)
     np.save(data_dir+"ks.npy",ks)
 
     # obtain the mm power spectrum
-    ks, Pk_mm = get_Pk(pos_snap_fns,N_dim,Lbox,interlaced)
+    ks, Pk_mm = get_Pk(pos_snap_fns,N_dim,Lbox,interlaced,dk=dk)
     print("Computed mm power spectrum")
     np.save(data_dir+"Pk_mm.npy",Pk_mm)
 
     # obtain the mm power spectrum
-    ks, Pk_hm = get_Pk(pos_halo_fns,N_dim,Lbox,interlaced,pos2_fns=pos_snap_fns)
+    ks, Pk_hm = get_Pk(pos_halo_fns,N_dim,Lbox,interlaced,pos2_fns=pos_snap_fns,dk=dk)
     print("Computed hm power spectrum")
     np.save(data_dir+"Pk_hm.npy",Pk_hm)
 

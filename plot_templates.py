@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # user choices
-R_smooth = 2.
+R_smooth = 4.
 z_nbody = 1.
 simulation_code = 'gadget'
 machine = 'alan'
@@ -30,7 +30,6 @@ Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
 k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 k_starts = np.zeros(len(k_lengths),dtype=int)
 k_starts[1:] = np.cumsum(k_lengths)[:-1]
-
 
 fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
 labels = []

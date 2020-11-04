@@ -44,8 +44,8 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced):
 
     return mesh
 
-def get_cross_ps(first_mesh,second_mesh):
-    r_cross = FFTPower(first=first_mesh, second=second_mesh, mode='1d')#, dk=0.005, kmin=0.01)   
+def get_cross_ps(first_mesh,second_mesh,dk=None):
+    r_cross = FFTPower(first=first_mesh, second=second_mesh, mode='1d', dk=dk)
     Pk_cross = r_cross.power['power']#.real
     ks = r_cross.power['k'] # [Mpc/h]^-1
     P_sn = r_cross.attrs['shotnoise']
@@ -74,13 +74,13 @@ def predict_Pk(f_params,ks_all,Pk_all,k_lengths):
             i_all += 1
     return Pk_predicted
 
-def get_all_cross_ps(mesh_list):
+def get_all_cross_ps(mesh_list,dk=None):
     k_lengths = []
     for i in range(len(mesh_list)):
         for j in range(len(mesh_list)):
             if j < i: continue
             print(i,j)
-            ks_ij, Pk_ij = get_cross_ps(mesh_list[i],mesh_list[j])
+            ks_ij, Pk_ij = get_cross_ps(mesh_list[i],mesh_list[j],dk)
             k_lengths.append(len(ks_ij))
             try:
                 Pk_all = np.hstack((Pk_all,Pk_ij))
@@ -93,7 +93,7 @@ def get_all_cross_ps(mesh_list):
     
     return ks_all, Pk_all, k_lengths
 
-def get_Pk_arr(pos1,N_dim,Lbox,interlaced,pos2=None):
+def get_Pk_arr(pos1,N_dim,Lbox,interlaced,dk=None,pos2=None):
     first = {}
     first['Position'] = pos1
 
@@ -116,14 +116,14 @@ def get_Pk_arr(pos1,N_dim,Lbox,interlaced,pos2=None):
         mesh2 = mesh2.apply(compensation, kind='circular', mode='complex')
 
     # obtain the "truth"
-    r = FFTPower(first=mesh1, second=mesh2, mode='1d')
+    r = FFTPower(first=mesh1, second=mesh2, mode='1d', dk=dk)
     ks = r.power['k']
     Pk = r.power['power'].astype(np.float64)
     P_sn = r.attrs['shotnoise']
     Pk -= P_sn
     return ks, Pk
-        
-def get_Pk(pos1_fns,N_dim,Lbox,interlaced,pos2_fns=None):
+
+def get_Pk(pos1_fns,N_dim,Lbox,interlaced,dk=None,pos2_fns=None):
     # calculate power spectrum of the galaxies or halos
     mesh1 = get_mesh(pos1_fns,N_dim,Lbox,interlaced)
 
@@ -133,10 +133,17 @@ def get_Pk(pos1_fns,N_dim,Lbox,interlaced,pos2_fns=None):
         mesh2 = get_mesh(pos2_fns,N_dim,Lbox,interlaced)
         
     # obtain the "truth"
-    r = FFTPower(first=mesh1, second=mesh2, mode='1d')
+    r = FFTPower(first=mesh1, second=mesh2, mode='1d', dk=dk)
     ks = r.power['k']
     Pk = r.power['power'].astype(np.float64)
     P_sn = r.attrs['shotnoise']
     Pk -= P_sn
     return ks, Pk
+
+def resample_mesh(field_old,Lbox,N_dim_new):
+    mesh_old = ArrayMesh(field_old, BoxSize=Lbox)
+    mesh_new = mesh_old.paint(mode='real', Nmesh=N_dim_new)
+    mesh_new = ArrayMesh(mesh_new, BoxSize=Lbox)
+
+    return mesh_new
 

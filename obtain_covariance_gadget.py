@@ -12,6 +12,7 @@ Lbox = 175.
 interlaced = True
 ind_snap = 0; z_nbody = 1.
 N_jack = 3
+dk = np.pi/Lbox
 
 #machine = 'NERSC'
 machine = 'alan'
@@ -42,7 +43,7 @@ for i_x in range(N_jack):
             pos_halo_jack[bool_arr] = np.array([0.,0.,0.])
             pos_halo_jack = pos_halo_jack[np.sum(pos_halo_jack,axis=1)!=0.]
 
-            ks, Pk_jack = get_Pk_arr(pos_halo_jack,N_dim,Lbox,interlaced)
+            ks, Pk_jack = get_Pk_arr(pos_halo_jack,N_dim,Lbox,interlaced,dk=dk)
             Pk_jack = Pk_jack.astype(float)
             
             Pk[:,i_x+N_jack*i_y+N_jack**2*i_z] = Pk_jack

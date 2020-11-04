@@ -9,7 +9,7 @@ from tools.power_spectrum import predict_Pk
 # user choices
 interlaced = True
 R_smooth = 2.
-k_max = 0.4#1.
+k_max = .3#.6 works
 k_min = 0.#0.03 # todo: figure this out!!!!!!
 z_nbody = 1.
 
@@ -38,9 +38,9 @@ elif simulation_code == 'gadget':
         data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
 
 # load power spectra
-Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
+#Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
 #Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
-#Pk_hh = np.load(data_dir+"Pk_hh.npy")
+Pk_hh = np.load(data_dir+"Pk_hh.npy")
 Pk_mm = np.load(data_dir+"Pk_mm.npy")
 Pk_hm = np.load(data_dir+"Pk_hm.npy")
 ks = np.load(data_dir+"ks.npy")

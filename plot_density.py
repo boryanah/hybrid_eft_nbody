@@ -31,7 +31,7 @@ def main():
 
     hdul = fits.open(data_dir+"pos_ones_snap_000.fits")
     pos_snap = hdul[1].data['Position']
-    dens = np.load(dens_dir+"density_smooth_%d.npy"%(int(R_smooth)))
+    dens = np.load(dens_dir+"delta_%d.npy"%(int(R_smooth)))
     #dens = np.load(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)))
 
     gr_size = Lbox/N_dim    
