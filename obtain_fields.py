@@ -3,9 +3,13 @@ import os
 import pyccl as ccl
 import glob
 import time
+import matplotlib.pyplot as plt
 
 from nbodykit.lab import *
 #from nbodykit.utils import ScatterArray
+
+#from multiprocessing import Pool
+#from itertools import repeat
 
 from tools.power_spectrum import resample_mesh
 from load_dictionary import load_dict
@@ -18,17 +22,17 @@ size = comm.Get_size()
 
 def calculate_fields():
 
-    want_bigfile = True
+    mode = 'convert_to_bigfile'
+    #mode = 'resample'
     
-    testing = 0
-    want_resample = False
-    convert_to_bigfile = False
+    want_bigfile = True
+    testing = 1
     
     machine = 'alan'
     #machine = 'NERSC'
 
-    #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = 'Sim256'
+    sim_name = "AbacusSummit_hugebase_c000_ph000"
+    #sim_name = 'Sim256'
 
     user_dict, cosmo_dict = load_dict(sim_name,machine)
     dens_dir = user_dict['dens_dir']
@@ -41,14 +45,18 @@ def calculate_fields():
     
     print("dens_dir = ",dens_dir)
 
-    if convert_to_bigfile:
+    if mode == 'resample':
+        # best to regenerate ICs
+        # B.H. NOTE THAT I HAVE CHANGED THE NBODYKIT FILE: /anaconda3/envs/p3/lib/python3.6/site-packages/nbodykit/base/mesh.py
+        mesh = BigFileMesh(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
+        #mesh = ArrayMesh(BigFileMesh(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field').paint(mode='real', Nmesh=N_dim_new),BoxSize=Lbox)
+        mesh.save_rigged(dens_dir+"density_%d.bigfile"%N_dim_new, mode='real', dataset='Field',Nmesh=N_dim_new)
+                    
+    
+    if mode == 'convert_to_bigfile':
         # for converting file to big file
-        if want_resample:
-            mesh = ArrayMesh(ArrayMesh(np.load(dens_dir+"density.npy"), BoxSize=Lbox).paint(mode='real', Nmesh=N_dim_new))
-            mesh.save(dens_dir+"density_%d.bigfile"%N_dim_new, mode='real', dataset='Field')
-        else:
-            mesh = ArrayMesh(np.load(dens_dir+"density.npy"), BoxSize=Lbox)
-            mesh.save(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
+        mesh = ArrayMesh(np.load(dens_dir+"density_%d.npy"%N_dim), BoxSize=Lbox)
+        mesh.save(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
         print("converted into a bigfile")
 
     
@@ -57,13 +65,16 @@ def calculate_fields():
     else:
         get_fields(dens_dir,R_smooth,N_dim,Lbox)
     print("obtained fields")
-
+    
 
     if testing == False: return
+    minus_field_name = "mnabla_sq"
 
-    field_names = ["delta","delta_sq","nabla_sq","s_sq"]
+    #field_names = ["delta","delta_sq","nabla_sq","s_sq"]
+    field_names = ["nabla_sq"]
     for field_name in field_names:
-        field = np.load(dens_dir+field_name+"_%d.npy"%R_smooth)
+        field = load_field_bigfile(minus_field_name,dens_dir,R_smooth)
+        #field = np.load(dens_dir+field_name+"_%d.npy"%R_smooth)
         if want_bigfile:
             field_test = load_field_bigfile(field_name,dens_dir,R_smooth)
         else:
@@ -72,9 +83,11 @@ def calculate_fields():
         print(field_test.shape)
         plt.figure(1)
         plt.imshow(field[:,:,20])
-
+        plt.colorbar()
+        
         plt.figure(2)
         plt.imshow(field_test[:,:,20])
+        plt.colorbar()
         plt.show()
 
         
@@ -82,6 +95,14 @@ if __name__ == "__main__":
 
     t1 = time.time()
     calculate_fields()
+
+    '''
+    # doesn't actually work - perhaps different architecture
+    p = Pool(10)    
+    p.starmap(calculate_fields, zip(repeat(1)))
+    p.close()
+    p.join()
+    '''
     t2 = time.time(); print("t = ",t2-t1)
 
 

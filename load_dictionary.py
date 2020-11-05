@@ -51,7 +51,7 @@ def load_dict(sim_name,machine):
         # user choices: abacus
         user_dict_abacus = {'sim_name': sim_name,
                             'interlaced': True,
-                            'N_dim': 2304,
+                            'N_dim': 1152,
                             'ppd': 2304,
                             'z_ic': 49,
                             'z_nbody': 1.,

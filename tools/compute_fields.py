@@ -40,7 +40,11 @@ def filter_tzz(k, v):
 
 def filter_nabla(k, v):
     kk = sum(ki ** 2 for ki in k) 
-    return -1.*v*kk 
+    return v*kk
+
+def filter_mnabla(k, v):
+    kk = sum(ki ** 2 for ki in k) 
+    return -v*kk 
 
 
 def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
@@ -64,6 +68,14 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     ArrayMesh(nabla_sq,BoxSize=Lbox).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     del nabla_sq
 
+    # minus nabla squared
+    '''
+    nabla_sq = (d_smooth_four.apply(filter_mnabla, mode='complex', kind='wavenumber')).paint(mode='real')
+    nabla_sq -= np.mean(nabla_sq)
+    ArrayMesh(nabla_sq,BoxSize=Lbox).save(dens_dir+"mnabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    del nabla_sq
+    '''
+    
     # tidal tensor squared
     s_sq = (d_smooth_four.apply(filter_txx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
            (d_smooth_four.apply(filter_tyy, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
@@ -85,6 +97,8 @@ def load_field_bigfile(field_name,dens_dir,R_smooth):
         return load_s_sq_bigfile(dens_dir,R_smooth)
     if field_name == 'nabla_sq':
         return load_nabla_sq_bigfile(dens_dir,R_smooth)
+    if field_name == 'mnabla_sq':
+        return load_mnabla_sq_bigfile(dens_dir,R_smooth)
 
 def load_s_sq_bigfile(dens_dir,R_smooth):
     mesh = BigFileMesh(dens_dir+"s_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
@@ -92,6 +106,10 @@ def load_s_sq_bigfile(dens_dir,R_smooth):
 
 def load_nabla_sq_bigfile(dens_dir,R_smooth):
     mesh = BigFileMesh(dens_dir+"nabla_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
+    return mesh.paint(mode='real')
+
+def load_mnabla_sq_bigfile(dens_dir,R_smooth):
+    mesh = BigFileMesh(dens_dir+"mnabla_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
     return mesh.paint(mode='real')
 
 def load_delta_sq_bigfile(dens_dir,R_smooth):

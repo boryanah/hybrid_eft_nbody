@@ -31,10 +31,15 @@ k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 k_starts = np.zeros(len(k_lengths),dtype=int)
 k_starts[1:] = np.cumsum(k_lengths)[:-1]
 
+print(k_lengths)
+
+# TESTING
+# og
 fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
+#fields = ['1','\delta','\delta^2','\\nabla^2 \delta','-\\nabla^2 \delta','s^2']
 labels = []
-for i in range(5):
-    for j in range(5):
+for i in range(len(fields)):
+    for j in range(len(fields)):
         if j < i: continue
         label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
         labels.append(label)
@@ -60,7 +65,7 @@ for i in range(ncurve):
 
     if 'nabla' in label:
         print(label,Pk)
-        Pk = np.abs(Pk)
+        #Pk = np.abs(Pk)
         
     if i % nperplot == 0:
         plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='hh',zorder=1)
