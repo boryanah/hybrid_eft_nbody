@@ -33,8 +33,8 @@ def save_pos(pos,type_pos,data_dir,value=None):
 
 def get_positions():
     
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     sim_name = 'Sim256'
@@ -64,17 +64,27 @@ def get_positions():
     D_growth = D_z_nbody/D_z_ic
 
     # I don't think broadcasting makes sense, might somehow be able to allocate the data better with more ranks?
+    '''
+    if rank == 0:
+        print("loading fields")
+        fields = {}
+        for i in range(len(field_names)):
+            fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
+    else:
+        fields = None
+    fields = comm.bcast(fields,root=0)
+    '''
     fields = {}
     for i in range(len(field_names)):
         fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
     
-        
     # create directory if it does not exist
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
     # loop over all chunks
     for i_chunk in range(n_chunks):
+        #if (rank-1) != i_chunk%size: continue
         if (rank) != i_chunk%size: continue
         
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
@@ -93,10 +103,15 @@ def get_positions():
             
         elif user_dict['sim_code'] == 'gadget':
             # find all files, todo: fix for multiple chunks
-            ic_fns = sorted(glob.glob(user_dict['sim_dir']+"ic_*"))
-            snap_fns = sorted(glob.glob(user_dict['sim_dir']+"snap_*"))
-            fof_fns = sorted(glob.glob(user_dict['sim_dir']+"fof_*.fits"))
-            lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,user_dict['ind_snap'])
+            ic_fns = sorted(glob.glob(user_dict['sim_dir']+"ic_box_L%d_%d*"%(Lbox,user_dict['ppd'])))
+            snap_fns = sorted(glob.glob(user_dict['sim_dir']+"snap_box_L%d_%d_%03d*"%(Lbox,user_dict['ppd'],user_dict['ind_snap'])))
+            fof_fns = sorted(glob.glob(user_dict['sim_dir']+"fof_snap_box_L%d_%d_%03d*.fits"%(Lbox,user_dict['ppd'],user_dict['ind_snap'])))
+
+            print(ic_fns)
+            print(snap_fns)
+            print(fof_fns)
+    
+            lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk)
 
         save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir)
         del pos_halo

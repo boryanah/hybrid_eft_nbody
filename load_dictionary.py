@@ -5,7 +5,7 @@ def load_dict(sim_name,machine):
     # todo read stuff from sims
     R_smooth = 4.
     z_nbody = 1.
-    ind_dict_gadget = {'1.000': 0, '0.500': 1}
+    ind_dict_gadget = {'1.000': 0, '0.700': 1, '0.300': 1, '0.000': 1}
 
     
     if 'Abacus' in sim_name:
