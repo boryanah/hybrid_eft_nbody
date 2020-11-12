@@ -8,7 +8,7 @@ from nbodykit.lab import *
 from tools.power_spectrum import get_all_cross_ps, get_mesh
 from tools.read_abacus import read_abacus
 from tools.read_gadget import read_gadget
-from load_dictionary import load_dict
+from choose_parameters import load_dict
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()

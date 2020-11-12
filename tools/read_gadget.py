@@ -32,10 +32,11 @@ def read_grid(prefix,nfiles) :
     return grid_out
 
 
-def get_density(directory,want_show=False):
-    nfiles_input = 1
-    prefix_name = "dt_ic_box_L175_256"
-    dens = read_grid(directory+prefix_name+"_dens", nfiles_input)
+def get_density(dens_dir,Lbox,ppd,want_show=False):
+    prefix_name = "dt_ic_box_L%d_%d"%(int(Lbox),ppd)
+    dens_files = glob.glob(dens_dir+prefix_name+"_dens*")
+    nfiles_input = len(dens_files)
+    dens = read_grid(dens_dir+prefix_name+"_dens", nfiles_input)
 
     if want_show:
         ng = len(dens)
@@ -49,9 +50,86 @@ def get_density(directory,want_show=False):
 
     return dens
 
-def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
+def read_halo(halo_fns,i_chunk,n_chunks,read_header=False):
+    # load the halo positions
+    hdul = fits.open(halo_fns[i_chunk%len(halo_fns)])
+    header = hdul[0].header
+    data = hdul[1].data
+    hdul.close()
 
-    hdul = fits.open(halo_fns[ind_snap])
+    # select the positions
+    X = data['PX_CM']
+    Y = data['PY_CM']
+    Z = data['PZ_CM']
+    del data
+    pos_halo = np.vstack((X,Y,Z)).T
+
+    # check if number of chunks is equal to number of files
+    if len(halo_fns) != n_chunks and len(halo_fns) == 1:
+        len_chunk = pos_halo.shape[0]//n_chunks
+        pos_halo = pos_halo[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+    elif len(halo_fns) != n_chunks:
+        print("Something's up with your chunks: ",len(halo_fns),n_chunks);exit()
+    
+    if read_header:
+        return pos_halo, header
+    
+    return pos_halo
+
+def read_ic(ic_fns,i_chunk,n_chunks):
+    # load the IC catalog
+    cat_ic = nbodykit.io.gadget.Gadget1File(ic_fns[i_chunk%len(ic_fns)])
+        
+    # load IDs and positions of IC
+    id_ic = cat_ic['ID'][:]
+    assert np.sum(np.arange(id_ic[0],id_ic[-1]+1)-id_ic) == 0, "the ids of the ICs are not sorted properly"
+    del id_ic
+    pos_ic = cat_ic['Position'][:]
+    del cat_ic
+
+    # check if number of chunks is equal to number of files
+    if len(ic_fns) != n_chunks and len(ic_fns) == 1:
+        len_chunk = pos_ic.shape[0]//n_chunks
+        pos_ic = pos_ic[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+    elif len(ic_fns) != n_chunks:
+        print("Something's up with your chunks: ",len(ic_fns),n_chunks);exit()
+    
+    return pos_ic
+
+def read_snap(snap_fns,i_chunk,n_chunks):    
+    # load the snapshot catalog
+    cat_snap = nbodykit.io.gadget.Gadget1File(snap_fns[i_chunk%len(snap_fns)])
+    
+    # load IDs and positions of snapshot
+    id_snap = cat_snap['ID'][:]
+    pos_snap = cat_snap['Position'][:]
+    del cat_snap
+    
+    # sort the ids from 1 to N_part and apply that ordering for the positions
+    i_sort_snap = np.argsort(id_snap)
+    del id_snap
+    pos_snap = pos_snap[i_sort_snap]
+    del i_sort_snap
+
+    # check if number of chunks is equal to number of files
+    if len(snap_fns) != n_chunks and len(snap_fns) == 1:
+        len_chunk = pos_snap.shape[0]//n_chunks
+        pos_snap = pos_snap[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+    elif len(snap_fns) != n_chunks:
+        print("Something's up with your chunks: ",len(snap_fns),n_chunks);exit()
+    
+    return pos_snap
+
+
+def read_gadget(ic_fns,snap_fns,halo_fns,i_chunk,n_chunks):
+    pos_ic = read_ic(ic_fns,i_chunk,n_chunks)
+    pos_snap = read_snap(snap_fns,i_chunk,n_chunks)
+    pos_halo = read_halo(halo_fns,i_chunk,n_chunks)
+    return pos_ic, pos_snap, pos_halo
+
+def read_gadget_all(ic_fns,snap_fns,halo_fns,i_chunk):
+
+    hdul = fits.open(halo_fns[i_chunk])
     header = hdul[0].header
     data = hdul[1].data
     X = data['PX_CM']
@@ -59,10 +137,9 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     Z = data['PZ_CM']
     pos_halo = np.vstack((X,Y,Z)).T
 
-    
     # load the IC and some snapshot
-    cat_ic = nbodykit.io.gadget.Gadget1File(ic_fns[0])
-    cat_snap = nbodykit.io.gadget.Gadget1File(snap_fns[ind_snap])
+    cat_ic = nbodykit.io.gadget.Gadget1File(ic_fns[i_chunk])
+    cat_snap = nbodykit.io.gadget.Gadget1File(snap_fns[i_chunk])
 
     # load IDs and positions of IC
     id_ic = cat_ic['ID'][:]
@@ -73,7 +150,7 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
     pos_snap = cat_snap['Position'][:]
 
     # find intersection between two
-    intersect, comm1, comm2 = np.intersect1d(id_ic,id_snap,return_indices=True)
+    #intersect, comm1, comm2 = np.intersect1d(id_ic,id_snap,return_indices=True)
 
     # reorder so that they are matching [1,2,3,...,Npart-1]
     #pos_ic = pos_ic[comm1]
@@ -86,6 +163,9 @@ def read_gadget(ic_fns,snap_fns,halo_fns,ind_snap):
 def main():
     machine = 'NERSC'#'alan'
 
+    Lbox = 175.
+    ppd = 256
+    
     if machine == 'NERSC':
         directory = "/global/cscratch1/sd/damonge/NbodySims/Sim256/"
         data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"
@@ -94,7 +174,7 @@ def main():
         data_dir = "/mnt/gosling1/boryanah/small_box_damonge/output/"
 
     # get the coarse density field
-    dens = get_density(directory,want_show=True)
+    dens = get_density(directory,Lbox,ppd,want_show=True)
     np.save(data_dir+"density.npy",dens)
     
     # find all files
@@ -103,10 +183,10 @@ def main():
     fof_fns = sorted(glob.glob(directory+"fof_*.fits"))
     
     # select snapshot
-    ind_snap = 0
+    i_chunk = 0
 
     # return position of the particles and halos
-    pos_ic, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,ind_snap)
+    pos_ic, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk)
     np.save(data_dir+"pos_ic.npy",pos_ic)
     np.save(data_dir+"pos_snap.npy",pos_snap)
     np.save(data_dir+"pos_halo.npy",pos_halo)

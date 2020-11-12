@@ -64,7 +64,8 @@ for i in range(ncurve):
     ks = ks_all[start:start+size]
 
     if 'nabla' in label:
-        print(label,Pk)
+        True
+        #print(label,Pk)
         #Pk = np.abs(Pk)
         
     if i % nperplot == 0:

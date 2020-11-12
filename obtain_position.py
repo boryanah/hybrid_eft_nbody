@@ -10,7 +10,7 @@ from nbodykit.lab import *
 from tools.compute_fields import load_field_bigfile
 from tools.read_abacus import read_abacus
 from tools.read_gadget import read_gadget
-from load_dictionary import load_dict
+from choose_parameters import load_dict
 import fitsio
 
 comm = MPI.COMM_WORLD
@@ -33,10 +33,10 @@ def save_pos(pos,type_pos,data_dir,value=None):
 
 def get_positions():
     
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
-    sim_name = "AbacusSummit_hugebase_c000_ph000"
+    #sim_name = "AbacusSummit_hugebase_c000_ph000"
     sim_name = 'Sim256'
 
     user_dict, cosmo_dict = load_dict(sim_name,machine)
@@ -49,7 +49,6 @@ def get_positions():
     N_dim = user_dict['N_dim']
     z_ic = user_dict['z_ic']
     Lbox = user_dict['Lbox']
-    dk = user_dict['dk']
     
     # names of the 5 fields tuks
     field_names = ['delta', 'delta_sq', 'nabla_sq', 's_sq']
@@ -84,8 +83,8 @@ def get_positions():
 
     # loop over all chunks
     for i_chunk in range(n_chunks):
-        #if (rank-1) != i_chunk%size: continue
-        if (rank) != i_chunk%size: continue
+        #if (rank-1) != i_chunk%size: continue # relevant if broadcasting in root though not really
+        if rank != i_chunk%size: continue
         
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
             print("Data from chunk %d already saved, moving on"%i_chunk)
@@ -110,12 +109,12 @@ def get_positions():
             print(ic_fns)
             print(snap_fns)
             print(fof_fns)
-    
-            lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk)
+            # not gonna work with 1024
+            lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk,n_chunks)
 
         save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir)
         del pos_halo
-            
+
         # get i, j, k for position on the density array
         lagr_ijk = (lagr_pos/(Lbox/N_dim)).astype(int)%N_dim
         del lagr_pos

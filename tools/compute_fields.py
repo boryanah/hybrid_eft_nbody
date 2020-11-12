@@ -121,10 +121,9 @@ def load_delta_bigfile(dens_dir,R_smooth):
     return mesh.paint(mode='real')
 
 
-
-
-
-
+##########################################
+##########      OLD CODE      ############
+##########################################
 
 def get_fourier_smooth(density,R_smooth,N_dim,Lbox):
 

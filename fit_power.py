@@ -8,7 +8,7 @@ from tools.power_spectrum import predict_Pk
 
 # user choices
 interlaced = True
-R_smooth = 2.
+R_smooth = 4.
 k_max = 0.5#1.
 k_min = 0.#0.03 # todo: figure this out!!!!!!
 z_nbody = 1.

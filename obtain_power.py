@@ -7,7 +7,7 @@ import time
 from nbodykit.source.catalog import FITSCatalog
 
 from tools.power_spectrum import get_Pk
-from load_dictionary import load_dict
+from choose_parameters import load_dict
 
 def get_power():
 
@@ -28,20 +28,12 @@ def get_power():
     
     # load simulation information; 
     pos_halo_fns = sorted(glob.glob(data_dir+"pos_halo_*"))
-    pos_snap_fns = sorted(glob.glob(data_dir+"pos_ones_snap_*"))
-
-    print("Obtained positions and snapshots")
-    N_halo = np.sum(np.load(data_dir+"N_halo_lengths.npy"))
-    
-    # number density of halos and shot noise
-    n_halo = N_halo/Lbox**3.
-    P_sn = 1./n_halo
+    pos_snap_fns = sorted(glob.glob(data_dir+"pos_ones_snap_*"))    
 
     # obtain the hh power spectrum
     ks, Pk_hh = get_Pk(pos_halo_fns,N_dim,Lbox,interlaced,dk=dk)
     print("Computed hh power spectrum")
     np.save(data_dir+"Pk_hh.npy",Pk_hh)
-    np.save(data_dir+"Pk_hh-sn.npy",Pk_hh-P_sn)
     np.save(data_dir+"ks.npy",ks)
 
     # obtain the mm power spectrum
