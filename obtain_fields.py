@@ -16,18 +16,19 @@ size = comm.Get_size()
 
 def calculate_fields():
 
-    mode = 'convert_to_bigfile'
+    #mode = 'convert_to_bigfile'
     #mode = 'resample'
-    #mode = ''
+    mode = ''
     
     want_bigfile = True
     testing = 0
     
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
-    #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = 'Sim256'
+    sim_name = "AbacusSummit_hugebase_c000_ph000"
+    #sim_name = 'Sim256'
+    #sim_name = 'Sim1024'
     
     user_dict, cosmo_dict = load_dict(sim_name,machine)
     dens_dir = user_dict['dens_dir']

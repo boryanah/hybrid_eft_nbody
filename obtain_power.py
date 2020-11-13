@@ -3,6 +3,7 @@ import os
 from nbodykit.lab import *
 import glob
 import time
+from memory_profiler import memory_usage
 
 from nbodykit.source.catalog import FITSCatalog
 
@@ -11,11 +12,11 @@ from choose_parameters import load_dict
 
 def get_power():
 
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
-    #sim_name = 'AbacusSummit_hugebase_c000_ph000'
-    sim_name = 'Sim256'
+    sim_name = 'AbacusSummit_hugebase_c000_ph000'
+    #sim_name = 'Sim256'
     
     user_dict, cosmo_dict = load_dict(sim_name,machine)
     interlaced = user_dict['interlaced']
@@ -51,4 +52,6 @@ if __name__ == "__main__":
 
     t1 = time.time()
     get_power()
+    #mem_usage = memory_usage(get_power(),interval=1., timeout=None)
+    #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)

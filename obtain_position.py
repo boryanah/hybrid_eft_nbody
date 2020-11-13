@@ -3,6 +3,7 @@ import os
 import pyccl as ccl
 import glob
 import time
+from memory_profiler import memory_usage
 
 from nbodykit.lab import *
 #from nbodykit.utils import ScatterArray # can't broadcast, only parts
@@ -33,12 +34,13 @@ def save_pos(pos,type_pos,data_dir,value=None):
 
 def get_positions():
     
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
-    #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = 'Sim256'
-
+    sim_name = "AbacusSummit_hugebase_c000_ph000"
+    #sim_name = 'Sim256'
+    #sim_name = 'Sim1024'
+    
     user_dict, cosmo_dict = load_dict(sim_name,machine)
     interlaced = user_dict['interlaced']
     dens_dir = user_dict['dens_dir']
@@ -65,7 +67,6 @@ def get_positions():
     # I don't think broadcasting makes sense, might somehow be able to allocate the data better with more ranks?
     '''
     if rank == 0:
-        print("loading fields")
         fields = {}
         for i in range(len(field_names)):
             fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
@@ -76,6 +77,7 @@ def get_positions():
     fields = {}
     for i in range(len(field_names)):
         fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
+    print("loaded fields")
     
     # create directory if it does not exist
     if not os.path.exists(data_dir):
@@ -85,6 +87,7 @@ def get_positions():
     for i_chunk in range(n_chunks):
         #if (rank-1) != i_chunk%size: continue # relevant if broadcasting in root though not really
         if rank != i_chunk%size: continue
+        print("saving out chunk number %d out of %d chunks"%(i_chunk,n_chunks))
         
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
             print("Data from chunk %d already saved, moving on"%i_chunk)
@@ -92,7 +95,7 @@ def get_positions():
         
         if user_dict['sim_code'] == 'abacus':
             # load simulation information 
-            lagr_pos, pos_snap, halo_table, header = read_abacus(sim_name,z_nbody,i_chunk)
+            lagr_pos, pos_snap, halo_table = read_abacus(sim_name,z_nbody,i_chunk)
             pos_halo = halo_table['x_L2com']
 
             # convert [-Lbox/2.,Lbox/2.] to [0,Lbox]
@@ -109,7 +112,7 @@ def get_positions():
             print(ic_fns)
             print(snap_fns)
             print(fof_fns)
-            # not gonna work with 1024
+            
             lagr_pos, pos_snap, pos_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk,n_chunks)
 
         save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir)
@@ -131,6 +134,9 @@ def get_positions():
 if __name__ == "__main__":
 
     t1 = time.time()
-    get_positions()
+    #get_positions()
+    mem_usage = memory_usage(get_positions,interval=1., timeout=None)
+    #print('Memory usage (in chunks of .1 seconds): %s MB' % mem_usage)
+    print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)
     

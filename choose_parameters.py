@@ -5,7 +5,7 @@ import asdf
 
 def load_dict(sim_name,machine):
     # user choices
-    z_nbody = 1.
+    z_nbody = 1.1
     R_smooth = 4.
     interlaced = True
     
@@ -25,6 +25,7 @@ def load_dict(sim_name,machine):
             sim_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
             data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
             dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/"
+            print("for any box that is phase 000 can use the hugebase field files")
 
         cat_dir = os.path.join(sim_dir,"z%.3f"%z_nbody)
         n_chunks = len(glob.glob(os.path.join(cat_dir,'halo_info/halo_info_*.asdf')))
@@ -45,7 +46,7 @@ def load_dict(sim_name,machine):
         Omega_c = header['omega_cdm']/h**2
         sigma8 = 0.807952#header['sigma8_m']
         print("Need to figure out how to read the sigma 8 properly")
-        f_growth = header['f_growth']
+        #f_growth = header['f_growth']
         
     # data directory: gadget
     elif sim_code == 'gadget':
@@ -83,7 +84,8 @@ def load_dict(sim_name,machine):
     cosmo_dict = {'h': h,
                   'n_s': n_s,
                   'Omega_c': Omega_c,
-                  'Omega_b': Omega_b}
+                  'Omega_b': Omega_b,
+                  'sigma8': sigma8}
     
     # simulation
     user_dict = {'dk': np.pi/Lbox,
@@ -92,6 +94,7 @@ def load_dict(sim_name,machine):
                  'Lbox': Lbox,
                  'N_dim': N_dim,
                  'z_nbody': z_nbody,
+                 'sim_dir': sim_dir,
                  'n_chunks': n_chunks,
                  'data_dir': data_dir,
                  'dens_dir': dens_dir,
@@ -102,9 +105,6 @@ def load_dict(sim_name,machine):
 
     # special fields
     if sim_code == 'gadget':
-        cosmo_dict['sigma8'] = sigma8
         user_dict['ind_snap'] = ind_dict_gadget['%.3f'%(z_nbody)]
-    elif sim_code == 'abacus':
-        cosmo_dict['f_growth'] = f_growth
     
     return user_dict, cosmo_dict

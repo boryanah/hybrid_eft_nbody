@@ -5,37 +5,25 @@ import glob
 import matplotlib.pyplot as plt
 
 from tools.power_spectrum import predict_Pk
+from choose_parameters import load_dict
 
 # user choices
-interlaced = True
-R_smooth = 4.
-k_max = .3#.6 works
-k_min = 0.#0.03 # todo: figure this out!!!!!!
-z_nbody = 1.
-
-simulation_code = 'gadget'
-#simulation_code = 'abacus'
-
-machine = 'alan'
-#machine = 'NERSC'
-
 #fit_type = 'ratio_both'
 fit_type = 'power'
 #fit_type = 'ratio'
+k_max = .3#.6 works
+k_min = 0.#0.03 
 
-if simulation_code == 'abacus':
-    sim_name = "AbacusSummit_hugebase_c000_ph000"
-    #small/AbacusSummit_small_c000_ph3046
-    if machine == 'alan':
-        data_dir = "/mnt/store1/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-    elif machine == 'NERSC':
-        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-elif simulation_code == 'gadget':
-    sim_name = "Sim256"
-    if machine == 'alan':
-        data_dir = "/mnt/gosling1/boryanah/"+sim_name+"/z%.3f/"%z_nbody
-    elif machine == 'NERSC':
-        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
+#machine = 'alan'
+machine = 'NERSC'
+
+sim_name = "AbacusSummit_hugebase_c000_ph000"
+#sim_name = "Sim256"
+
+user_dict, cosmo_dict = load_dict(sim_name,machine)
+
+R_smooth = user_dict['R_smooth']
+data_dir = user_dict['data_dir']
 
 # load power spectra
 #Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
@@ -62,8 +50,11 @@ elif fit_type == 'ratio':
     rat_err = np.ones(len(rat_hh))*1.e-1
 
 # load errorbars for plotting
-Pk_err = np.load(data_dir+"Pk_hh_err.npy")
-Pk_err = Pk_err[k_cut]
+# TESTING
+Pk_err = Pk_hh*0.3
+# og
+#Pk_err = np.load(data_dir+"Pk_hh_err.npy")
+#Pk_err = Pk_err[k_cut]
 
 # covariance matrix
 if fit_type == 'ratio':
