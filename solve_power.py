@@ -14,11 +14,11 @@ fit_type = 'power'
 k_max = .3#.6 works
 k_min = 0.#0.03 
 
-#machine = 'alan'
-machine = 'NERSC'
+machine = 'alan'
+#machine = 'NERSC'
 
-sim_name = "AbacusSummit_hugebase_c000_ph000"
-#sim_name = "Sim256"
+#sim_name = "AbacusSummit_hugebase_c000_ph000"
+sim_name = "Sim256"
 
 user_dict, cosmo_dict = load_dict(sim_name,machine)
 
@@ -75,6 +75,25 @@ Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
 Pk_all = Pk_all[:,k_cut]
 P_hat = Pk_all.T
 alpha = np.dot(np.linalg.inv(np.dot(np.dot(P_hat.T,icov),P_hat)),np.dot(np.dot(P_hat.T,icov),Pk_hh[:,None]))
+
+
+print('alpha = ',alpha)
+F_i = np.zeros(5)
+F_i[0] = np.sqrt(alpha[0])
+F_i[1] = (alpha[1])/F_i[0]
+F_i[2] = (alpha[2])/F_i[0]
+F_i[3] = (alpha[3])/F_i[0]
+F_i[4] = (alpha[4])/F_i[0]
+
+c = 0
+for i in range(5):
+    for j in range(5):
+        if i > j: continue
+        print('F_%d F_%d = '%(i+1,j+1),F_i[i]*F_i[j])
+        print('alpha = ',alpha[c])
+        c += 1
+        print("--------------------------")
+
 
 # compute power spectrum for best-fit
 Pk_best = np.dot(P_hat,alpha)
