@@ -5,42 +5,32 @@ import glob
 import matplotlib.pyplot as plt
 
 from tools.power_spectrum import predict_Pk
+from choose_parameters import load_dict
 
 # user choices
-interlaced = True
-R_smooth = 4.
-k_max = 0.5#1.
-k_min = 0.#0.03 # todo: figure this out!!!!!!
-z_nbody = 1.
-
-simulation_code = 'gadget'
-#simulation_code = 'abacus'
+#fit_type = 'ratio_both'
+fit_type = 'power'
+#fit_type = 'ratio'
+k_max = .3#.6 works
+k_min = 0.#0.03 
 
 machine = 'alan'
 #machine = 'NERSC'
 
-#fit_type = 'ratio_both'
-fit_type = 'power'
-#fit_type = 'ratio'
+#sim_name = "AbacusSummit_hugebase_c000_ph000"
+sim_name = "Sim256"
 
-if simulation_code == 'abacus':
-    sim_name = "AbacusSummit_hugebase_c000_ph000"
-    #small/AbacusSummit_small_c000_ph3046
-    if machine == 'alan':
-        data_dir = "/mnt/store1/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-    elif machine == 'NERSC':
-        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-elif simulation_code == 'gadget':
-    sim_name = "Sim256"
-    if machine == 'alan':
-        data_dir = "/mnt/gosling1/boryanah/"+sim_name+"/z%.3f/"%z_nbody
-    elif machine == 'NERSC':
-        data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/"+sim_name+"/z%.3f/"%z_nbody
+user_dict, cosmo_dict = load_dict(sim_name,machine)
+
+R_smooth = user_dict['R_smooth']
+data_dir = user_dict['data_dir']
+
+
 
 # load power spectra
 #Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
-Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
-#Pk_hh = np.load(data_dir+"Pk_hh.npy")
+#Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
+Pk_hh = np.load(data_dir+"Pk_hh.npy")
 Pk_mm = np.load(data_dir+"Pk_mm.npy")
 Pk_hm = np.load(data_dir+"Pk_hm.npy")
 ks = np.load(data_dir+"ks.npy")
@@ -117,11 +107,29 @@ method = 'powell'
 #method = 'nelder-mead'
 res = minimize(calculate_chi2, x0, method=method,\
                options={'xtol': xtol, 'disp': True})
-f_best = res.x
-print(f_best)
+alpha = res.x
+print(alpha)
+
+print('alpha = ',alpha)
+F_i = np.zeros(5)
+F_i[0] = 1.#np.sqrt(alpha[0])
+F_i[1] = (alpha[0])/F_i[0]#(alpha[1])/F_i[0]
+F_i[2] = (alpha[1])/F_i[0]#(alpha[2])/F_i[0]
+F_i[3] = (alpha[2])/F_i[0]#(alpha[3])/F_i[0]
+F_i[4] = (alpha[3])/F_i[0]#(alpha[4])/F_i[0]
+
+c = 0
+for i in range(5):
+    for j in range(5):
+        if i > j: continue
+        print('F_%d F_%d = '%(i+1,j+1),F_i[i]*F_i[j])
+        #print('alpha = ',alpha[c])
+        c += 1
+        print("--------------------------")
+
 
 # compute power spectrum for best-fit parameters
-Pk_best = predict_Pk(f_best,ks_all,Pk_all,k_lengths)
+Pk_best = predict_Pk(alpha,ks_all,Pk_all,k_lengths)
 Pk_best = Pk_best[k_cut]
 
 # plot fit
