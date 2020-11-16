@@ -4,15 +4,16 @@ from scipy.optimize import minimize
 import glob
 import matplotlib.pyplot as plt
 
-from tools.power_spectrum import predict_Pk
+from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
 
 # user choices
-#fit_type = 'ratio_both'
 fit_type = 'power'
+#fit_type = 'power_both'
 #fit_type = 'ratio'
-k_max = .3#.6 works
-k_min = 0.#0.03 
+#fit_type = 'ratio_both'
+k_max = 0.3
+k_min = 0.
 
 machine = 'alan'
 #machine = 'NERSC'
@@ -20,8 +21,8 @@ machine = 'alan'
 #sim_name = "AbacusSummit_hugebase_c000_ph000"
 sim_name = "Sim256"
 
+# load parameters
 user_dict, cosmo_dict = load_dict(sim_name,machine)
-
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
@@ -40,30 +41,37 @@ Pk_mm = Pk_mm[k_cut]
 Pk_hm = Pk_hm[k_cut]
 ks = ks[k_cut]
 
+# load errorbars for plotting
+Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
+Pk_hh_err = Pk_hh_err[k_cut]
+Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
+#Pk_hm_err = Pk_hm_err[k_cut]
+
 # combine the ratios
 # TODO has to be done properly with jackknifing
-if fit_type == 'ratio_both':
-    rat_hh = np.hstack((Pk_hh/Pk_mm,Pk_hm/Pk_mm))
-    rat_err = np.ones(len(rat_hh))*1.e-1
+if fit_type == 'power':
+    Pk_hh = Pk_hh
+    Pk_hh_err = Pk_hh_err
+    Pk_hh_err[0] = 1.e-6
+    cov = np.diag(Pk_hh_err)
+elif fit_type == 'power_both':
+    Pk = np.hstack((Pk_hh,Pk_hm))
+    Pk_err = np.hstack((Pk_hh_err,Pk_hm_err))
+    Pk_err[0] = 1.e-6
+    Pk_err[len(Pk_hh)] = 1.e-6
+    cov = np.diag(Pk_err)
 elif fit_type == 'ratio':
     rat_hh = Pk_hh/Pk_mm
-    rat_err = np.ones(len(rat_hh))*1.e-1
-
-# load errorbars for plotting
-# TESTING
-Pk_err = Pk_hh*0.3
-# og
-#Pk_err = np.load(data_dir+"Pk_hh_err.npy")
-#Pk_err = Pk_err[k_cut]
-
-# covariance matrix
-if fit_type == 'ratio':
+    rat_hh_err = np.ones(len(rat_hh))*1.e-1
+    rat_hh_err[0] = 1.e-6
+    cov = np.diag(rat_hh_err)
+elif fit_type == 'ratio_both':
+    rat = np.hstack((Pk_hh/Pk_mm,Pk_hm/Pk_mm))
+    rat_err = np.ones(len(rat))*1.e-1
+    rat_err[0] = 1.e-6
+    rat_err[len(Pk_hh)] = 1.e-6
     cov = np.diag(rat_err)
-else:
-    cov = np.diag(Pk_err)
-cov[0,0] = 1.
 icov = np.linalg.inv(cov)
-icov[0,0] = 1.e6
 
 # load all 15 templates
 ks_all = np.load(data_dir+"ks_all.npy")
@@ -79,7 +87,8 @@ alpha = np.dot(np.linalg.inv(np.dot(np.dot(P_hat.T,icov),P_hat)),np.dot(np.dot(P
 
 print('alpha = ',alpha)
 F_i = np.zeros(5)
-F_i[0] = np.sqrt(alpha[0])
+# TESTING
+F_i[0] = 1.#np.sqrt(alpha[0])
 F_i[1] = (alpha[1])/F_i[0]
 F_i[2] = (alpha[2])/F_i[0]
 F_i[3] = (alpha[3])/F_i[0]
@@ -94,18 +103,32 @@ for i in range(5):
         c += 1
         print("--------------------------")
 
-
 # compute power spectrum for best-fit
-Pk_best = np.dot(P_hat,alpha)
+Pk_hh_best = np.dot(P_hat,alpha)
+print(len(Pk_hh_best))
 #Pk_best = Pk_best[k_cut]
+Pk_hm_best = np.sum(np.array([P_hat[:,i]*F_i[i] for i in range(len(F_i))]),axis=0)
+print(len(Pk_hm_best))
+#Pk_hm_best = Pk_hm_best[k_cut]
 
 # plot fit
-plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='halo-halo',zorder=1)
-plt.plot(ks,Pk_best,color='dodgerblue',label='EFT-Hybrid',zorder=2)
+plt.figure(1)
+plt.errorbar(ks,Pk_hh,yerr=Pk_hh_err,color='black',label='halo-halo',zorder=1)
+plt.plot(ks,Pk_hh_best,color='dodgerblue',label='halo-halo fit',zorder=2)
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
 plt.ylabel(r"$P(k)$")
 plt.legend()
-plt.savefig("figs/Pk_fit.png")
+plt.savefig("figs/Pk_hh_fit.png")
+
+plt.figure(2)
+plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter',zorder=1)
+plt.plot(ks,Pk_hm_best,color='dodgerblue',label='halo-matter fit',zorder=2)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
+plt.ylabel(r"$P(k)$")
+plt.legend()
+plt.savefig("figs/Pk_hm_fit.png")
 plt.show()

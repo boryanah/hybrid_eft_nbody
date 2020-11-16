@@ -54,10 +54,14 @@ def get_cross_ps(first_mesh,second_mesh,dk=None):
     return ks, Pk_cross
 
 def predict_Pk(f_params,ks_all,Pk_all,k_lengths):
+    # initiate arrays
     k_starts = np.zeros(len(k_lengths),dtype=k_lengths.dtype)
     k_starts[1:] = np.cumsum(k_lengths)[:-1]
     Pk_predicted = np.zeros(k_lengths[0],dtype=np.float64) # assuming all are equal
-    f_params = f_params.astype(np.float64)
+
+    # add the first parameter equal to 1
+    f_params = np.hstack(([1.],f_params))
+    
     i_all = 0
     for i in range(len(f_params)):
         for j in range(len(f_params)):
@@ -70,8 +74,31 @@ def predict_Pk(f_params,ks_all,Pk_all,k_lengths):
             Pk_ij = Pk_all[start:start+length]
             
             Pk_predicted += f_params[i]*f_params[j]*Pk_ij
-
             i_all += 1
+    
+    return Pk_predicted
+
+def predict_Pk_cross(f_params,ks_all,Pk_all,k_lengths):
+    # initiate arrays
+    k_starts = np.zeros(len(k_lengths),dtype=k_lengths.dtype)
+    k_starts[1:] = np.cumsum(k_lengths)[:-1]
+    Pk_predicted = np.zeros(k_lengths[0],dtype=np.float64) # assuming all are equal
+
+    # add the first parameter equal to 1
+    f_params = np.hstack(([1.],f_params))
+    
+    i_all = 0
+    for i in range(len(f_params)):
+        start = k_starts[i_all]
+        length = k_lengths[i_all]
+            
+        ks_ij = ks_all[start:start+length]
+        Pk_ij = Pk_all[start:start+length]
+        
+        Pk_predicted += f_params[i]*f_params[0]*Pk_ij
+
+        i_all += 1
+        
     return Pk_predicted
 
 def get_all_cross_ps(mesh_list,dk=None):

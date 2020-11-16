@@ -5,7 +5,7 @@ import asdf
 
 def load_dict(sim_name,machine):
     # user choices
-    z_nbody = 1.1
+    z_nbody = 1.
     R_smooth = 4.
     interlaced = True
     
