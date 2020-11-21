@@ -81,34 +81,66 @@ k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 # linear solution
 Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
 Pk_all = Pk_all[:,k_cut]
-P_hat = Pk_all.T
-alpha = np.dot(np.linalg.inv(np.dot(np.dot(P_hat.T,icov),P_hat)),np.dot(np.dot(P_hat.T,icov),Pk_hh[:,None]))
+#P_hat = Pk_all.T
+        
+def get_P(F_this,k_length):
+    P_guess = np.zeros(k_length)
+    P_hat = np.zeros((k_length,len(F_this)))
+    for i in range(len(F_this)):
+        P_hat_i = np.zeros(k_length)
+        for j in range(len(F_this)):
+            P_ij = Pk_ij[i,j,:]
+            f_i = F_this[i]
+            f_j = F_this[j]
+
+            P_guess += f_i*f_j*P_ij
+            P_hat_i += f_j*P_ij
+
+        P_hat[:,i] = P_hat_i
+    return P_guess, P_hat 
+
+# initial guess
+F = np.ones((5,1))
+F_old = np.ones((5,1))*1.e9
+
+# choose tolerance
+tol = 4.
+k_length = len(Pk_hh)
+err = 1.e9
 
 
-print('alpha = ',alpha)
-F_i = np.zeros(5)
-# TESTING
-F_i[0] = 1.#np.sqrt(alpha[0])
-F_i[1] = (alpha[1])/F_i[0]
-F_i[2] = (alpha[2])/F_i[0]
-F_i[3] = (alpha[3])/F_i[0]
-F_i[4] = (alpha[4])/F_i[0]
-
+Pk_ij = np.zeros((len(F),len(F),k_length))
 c = 0
-for i in range(5):
-    for j in range(5):
+for i in range(len(F)):
+    for j in range(len(F)):
         if i > j: continue
-        print('F_%d F_%d = '%(i+1,j+1),F_i[i]*F_i[j])
-        print('alpha = ',alpha[c])
+        Pk_ij[i,j,:] = Pk_all[c]
+        if i != j: Pk_ij[j,i,:] = Pk_all[c]
         c += 1
-        print("--------------------------")
+
+
+while (err) > tol:
+    P_guess, P_hat = get_P(F,k_length)
+    P_h = Pk_hh - P_guess
+
+    PTiCov = np.dot(P_hat.T,icov)
+    iPTiCovP = np.linalg.inv(np.dot(PTiCov,P_hat))
+    alpha = np.dot(iPTiCovP,np.dot(PTiCov,P_h[:,None]))
+    
+    F_old = F.copy()
+    F = F + alpha
+
+    err = np.sqrt(np.sum((alpha/F)**2))
+    print("err, alpha, F = ",err,alpha, F)
+    print("-----------------------")
+    
+
 
 # compute power spectrum for best-fit
-Pk_hh_best = np.dot(P_hat,alpha)
-print(len(Pk_hh_best))
+P_guess, P_hat = get_P(F,k_length)
+Pk_hh_best = P_guess
 #Pk_best = Pk_best[k_cut]
-Pk_hm_best = np.sum(np.array([P_hat[:,i]*F_i[i] for i in range(len(F_i))]),axis=0)
-print(len(Pk_hm_best))
+Pk_hm_best = P_hat[:,0]*F[0]
 #Pk_hm_best = Pk_hm_best[k_cut]
 
 # plot fit
