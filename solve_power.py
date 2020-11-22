@@ -8,12 +8,14 @@ from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
 
 # user choices
-fit_type = 'power'
+fit_type = 'power_hh'
 #fit_type = 'power_both'
+#fit_type = 'power_hm'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
 k_max = 0.3
 k_min = 0.
+fit_shotnoise = False
 
 machine = 'alan'
 #machine = 'NERSC'
@@ -49,16 +51,24 @@ Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
 
 # combine the ratios
 # TODO has to be done properly with jackknifing
-if fit_type == 'power':
+if fit_type == 'power_hh':
     Pk_hh = Pk_hh
     Pk_hh_err = Pk_hh_err
     Pk_hh_err[0] = 1.e-6
+
+    # TESTING
+    #Pk_hh_err = np.hstack((Pk_hh_err,np.ones(len(Pk_hh))*1.e-6))
+    
     cov = np.diag(Pk_hh_err)
 elif fit_type == 'power_both':
     Pk = np.hstack((Pk_hh,Pk_hm))
     Pk_err = np.hstack((Pk_hh_err,Pk_hm_err))
-    Pk_err[0] = 1.e-6
     Pk_err[len(Pk_hh)] = 1.e-6
+    cov = np.diag(Pk_err)
+elif fit_type == 'power_hm':
+    Pk = Pk_hm
+    Pk_err = Pk_hm_err
+    Pk_err[0] = 1.e-6
     cov = np.diag(Pk_err)
 elif fit_type == 'ratio':
     rat_hh = Pk_hh/Pk_mm
@@ -104,10 +114,16 @@ F = np.ones((5,1))
 F_old = np.ones((5,1))*1.e9
 
 # choose tolerance
-tol = 4.
+tol = 1.e-3
 k_length = len(Pk_hh)
 err = 1.e9
+iteration = 0
 
+# shot noise params
+#Pk_sh = 1./n_bar # ideal shot noise
+Pk_sh = 0. #  [note that we have already subtracted it from Pk_hh]
+f_shot = 0. # initial value
+Pk_const = np.ones(k_length)
 
 Pk_ij = np.zeros((len(F),len(F),k_length))
 c = 0
@@ -118,29 +134,55 @@ for i in range(len(F)):
         if i != j: Pk_ij[j,i,:] = Pk_all[c]
         c += 1
 
-
-while (err) > tol:
+while err > tol:
     P_guess, P_hat = get_P(F,k_length)
-    P_h = Pk_hh - P_guess
+    P_hh = Pk_hh - P_guess
+    if fit_shotnoise:
+        P_sh = Pk_sh - f_shot*Pk_const
+        P_hh = P_hh - Pk_sh
+    P_hm = Pk_hm - P_hat[:,0]
 
+    if fit_type == 'power_hh':
+        P_h = P_hh
+        if fit_shotnoise:
+            P_hat = np.vstack((P_hat.T,Pk_const)).T
+    elif fit_type == 'power_both':
+        P_h = np.hstack((P_hh,P_hm)).T
+        P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,:,:].T))
+    elif fit_type == 'power_hm':
+        P_h = P_hm
+        P_hat = F[0]*Pk_ij[0,:,:].T
+
+    # solve matrix equation
     PTiCov = np.dot(P_hat.T,icov)
     iPTiCovP = np.linalg.inv(np.dot(PTiCov,P_hat))
     alpha = np.dot(iPTiCovP,np.dot(PTiCov,P_h[:,None]))
-    
+
+    # save new values
     F_old = F.copy()
-    F = F + alpha
-
-    err = np.sqrt(np.sum((alpha/F)**2))
-    print("err, alpha, F = ",err,alpha, F)
-    print("-----------------------")
+    F += 0.1 * alpha[:len(F_old)]
+    err = np.sum(((F-F_old)/F)**2)
     
+    if fit_shotnoise:
+        P_hh -= Pk_sh-f_shot*Pk_const
+        f_shot_old = f_shot
+        f_shot += 0.1*alpha[-1]
+        err += ((f_shot-f_shot_old))**2
 
+    # compute error
+    err = np.sqrt(err)
+
+    # record iteration
+    iteration += 1
+
+print("Fitting type = ",fit_type)
+print("Finished in %d iterations with bias values of "%iteration,F.T,f_shot)
 
 # compute power spectrum for best-fit
 P_guess, P_hat = get_P(F,k_length)
 Pk_hh_best = P_guess
 #Pk_best = Pk_best[k_cut]
-Pk_hm_best = P_hat[:,0]*F[0]
+Pk_hm_best = P_hat[:,0]
 #Pk_hm_best = Pk_hm_best[k_cut]
 
 # plot fit

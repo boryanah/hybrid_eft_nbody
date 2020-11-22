@@ -8,7 +8,7 @@ from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
 
 # user choices
-fit_type = 'power'
+fit_type = 'power_hh'
 #fit_type = 'power_both'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
@@ -49,7 +49,7 @@ Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
 
 # combine the ratios
 # TODO has to be done properly with jackknifing
-if fit_type == 'power':
+if fit_type == 'power_hh':
     Pk_hh = Pk_hh
     Pk_hh_err = Pk_hh_err
     Pk_hh_err[0] = 1.e-6
@@ -92,7 +92,7 @@ def calculate_chi2(f_i):
     P_hm = predict_Pk_cross(f_i,ks_all,Pk_all,k_lengths)
     P_hm = P_hm[k_cut]
 
-    if fit_type == 'power':
+    if fit_type == 'power_hh':
         attempt = P_hh
         target = Pk_hh
     elif fit_type == 'power_both':
