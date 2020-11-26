@@ -3,6 +3,7 @@ import os
 from scipy.optimize import minimize
 import glob
 import matplotlib.pyplot as plt
+import pyccl as ccl
 
 from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
@@ -19,9 +20,9 @@ fit_shotnoise = False
 
 # redshift choice
 #z_nbody = 1.1
-zs = [1.,0.7,0.3,0.]
+zs = np.array([0.,0.3,0.7,1.])
+sf = 1./(1+zs)
 z_nbody = zs[0]
-
 
 machine = 'alan'
 #machine = 'NERSC'
@@ -34,25 +35,74 @@ user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
-# which halo files are we loading
-#sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
-sim_name_halo = "Sim256"
-halo_dir = data_dir.replace(sim_name,sim_name_halo)
+# Cosmology
+cosmo = ccl.Cosmology(**cosmo_dict)
 
-# load power spectra
-#Pk_hh = np.load(data_dir+"Pk_hh.npy")
-Pk_hh = np.load(halo_dir+"Pk_hh.npy")
-Pk_mm = np.load(data_dir+"Pk_mm.npy")
-Pk_hm = np.load(data_dir+"Pk_hm.npy")
-ks = np.load(data_dir+"ks.npy")
-N_modes = len(ks)
+# Redshift distributions
+nzs = np.exp(-((zs-0.5)/0.05)**2/2)
 
-# apply cuts to the data
-k_cut = (ks < k_max) & (ks >= k_min)
-Pk_hh = Pk_hh[k_cut]
-Pk_mm = Pk_mm[k_cut]
-Pk_hm = Pk_hm[k_cut]
-ks = ks[k_cut]
+# Bias
+bzs = 0.95/ccl.growth_factor(cosmo,sf)
+
+# This tracer will only include the density contribution
+halos = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(zs,nzs), bias=(zs,bzs), mag_bias=None)
+
+
+sf = sf[::-1]
+bzs = bzs[::-1]
+
+for i in range(len(sf)):
+    # which halo files are we loading
+    z = zs[i]
+    a = sf[i]
+
+    # data directory
+    data_dir = data_dir.replace('z1.000','z%.3f'%z)
+
+    # load power spectra
+    Pk_hh = np.load(data_dir+"Pk_hh.npy")
+    #Pk_mm = np.load(data_dir+"Pk_mm.npy")
+    #Pk_hm = np.load(data_dir+"Pk_hm.npy")
+    ks = np.load(data_dir+"ks.npy")
+    N_modes = len(ks)
+
+    # apply cuts to the data
+    k_cut = (ks < k_max) & (ks >= k_min)
+    Pk_hh = Pk_hh[k_cut]
+    #Pk_mm = Pk_mm[k_cut]
+    #Pk_hm = Pk_hm[k_cut]
+    ks = ks[k_cut]
+
+    log_pk = np.log(Pk_hh)
+    try:
+        lpk_array = np.vstack((lpk_array,log_pk))
+    except:
+        lpk_array = log_pk
+
+# OK, let's first read off the matter power spectrum:
+#lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in sf]))
+
+# Create a Pk2D object
+pk_tmp = ccl.Pk2D(a_arr=sf, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
+
+# wave numbers
+ells = np.geomspace(2,1000,20)
+
+# Compute power spectra with and without cutoff
+#cl_hh_tmp = ccl.angular_cl(cosmo, halos, halos, ells, p_of_k_a=pk_tmp)
+cl_hh = ccl.angular_cl(cosmo, halos, halos, ells)
+
+
+# Let's plot the result
+plt.plot(ells, 1E4*cl_hh, 'r-', label='built-in tracer')
+plt.plot(ells, 1E4*cl_hh_tmp, 'k--', label='custom tracer')
+plt.xscale('log')
+plt.xlabel('$\\ell$', fontsize=14)
+plt.ylabel('$10^4\\times C_\\ell$', fontsize=14)
+plt.legend(loc='upper right', fontsize=12, frameon=False)
+plt.show()
+
+quit()
 
 print("err/true = ",np.sqrt(2./N_modes))
 # load errorbars for plotting

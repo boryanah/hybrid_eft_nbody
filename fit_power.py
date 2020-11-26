@@ -15,6 +15,9 @@ fit_type = 'power_hh'
 k_max = 0.3
 k_min = 0.
 
+# redshift choice
+z_nbody = 1.1
+
 machine = 'alan'
 #machine = 'NERSC'
 
@@ -26,7 +29,7 @@ sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
 halo_dir = data_dir.replace(sim_name,sim_name_halo)
 
 # load parameters
-user_dict, cosmo_dict = load_dict(sim_name,machine)
+user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 

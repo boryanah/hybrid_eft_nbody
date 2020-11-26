@@ -34,20 +34,23 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
     data['Position'] = pos
     
     # write to a FITS file using fitsio
-    fitsio.write(data_dir+"pos_"+type_pos+".fits", data, extname='Data')
+    fitsio.write(data_dir+"pos_"+type_pos+str_mthr+".fits", data, extname='Data')
     return
 
 def get_positions():
-    
-    #machine = 'alan'
-    machine = 'NERSC'
+    # redshift of snapshots
+    zs = [1., 0.7, 0.3, 0.]
+    z_nbody = zs[0]
+
+    machine = 'alan'
+    #machine = 'NERSC'
 
     #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = "AbacusSummit_hugebase_c000_ph001"
-    #sim_name = 'Sim256'
+    #sim_name = "AbacusSummit_hugebase_c000_ph001"
+    sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
-    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
     data_dir = user_dict['data_dir']
     n_chunks = user_dict['n_chunks']
     z_nbody = user_dict['z_nbody']
@@ -59,12 +62,8 @@ def get_positions():
 
     # loop over all chunks
     for i_chunk in range(n_chunks):
-        if rank != i_chunk%size: continue
+        #if rank != i_chunk%size: continue
         print("saving chunk number %d out of %d chunks"%(i_chunk,n_chunks))
-        
-        if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
-            print("Data from chunk %d already saved, moving on"%i_chunk)
-            continue
         
         if user_dict['sim_code'] == 'abacus':
             # load simulation information 
@@ -82,6 +81,7 @@ def get_positions():
             
             pos_halo, m_halo = read_halo_gadget(fof_fns,i_chunk,n_chunks)
 
+
         save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir,mass=m_halo)
         del pos_halo, m_halo
 
@@ -91,8 +91,9 @@ if __name__ == "__main__":
 
     t1 = time.time()
     #get_positions()
-    mem_usage = memory_usage(get_positions,interval=1., timeout=None)
+    get_positions()
+    #mem_usage = memory_usage(get_positions,interval=1., timeout=None)
     #print('Memory usage (in chunks of .1 seconds): %s MB' % mem_usage)
-    print('Maximum memory usage: %s MB' % np.max(mem_usage))
+    #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)
     

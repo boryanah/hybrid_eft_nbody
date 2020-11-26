@@ -11,18 +11,22 @@ from tools.power_spectrum import get_Pk
 from choose_parameters import load_dict
 
 def get_power():
-
+    # redshift choice
+    #z_nbody = 1.1
+    zs = [1.,0.7,0.3,0.]
+    z_nbody = zs[3]
+    
     #compute_pks = ['Pk_hh', 'Pk_hm', 'Pk_mm']
     compute_pks = ['Pk_hh']
 
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
     #sim_name = 'AbacusSummit_hugebase_c000_ph000'
-    sim_name = 'AbacusSummit_hugebase_c000_ph001'
-    #sim_name = 'Sim256'
+    #sim_name = 'AbacusSummit_hugebase_c000_ph001'
+    sim_name = 'Sim256'
     
-    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
     interlaced = user_dict['interlaced']
     data_dir = user_dict['data_dir']
     R_smooth = user_dict['R_smooth']

@@ -3,9 +3,8 @@ import os
 import glob
 import asdf
 
-def load_dict(sim_name,machine):
+def load_dict(z_nbody,sim_name,machine):
     # user choices
-    z_nbody = 1.1
     R_smooth = 4.
     interlaced = True
     m_threshold = 1.e13

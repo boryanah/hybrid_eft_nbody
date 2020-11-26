@@ -15,7 +15,9 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def calculate_fields():
-
+    # redshift choice (doesn't matter for the field calculation)
+    z_nbody = 1.1
+    
     #mode = 'convert_to_bigfile'
     #mode = 'resample'
     mode = ''
@@ -30,7 +32,7 @@ def calculate_fields():
     #sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
-    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
     dens_dir = user_dict['dens_dir']
     data_dir = user_dict['data_dir']
     R_smooth = user_dict['R_smooth']

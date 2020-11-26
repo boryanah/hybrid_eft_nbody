@@ -2,18 +2,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from choose_parameters import load_dict
 
+# redshift choice
+z_nbody = 1.
+
 machine = 'alan'
 machine = 'NERSC'
 
 sim_name = "AbacusSummit_hugebase_c000_ph000"
 #sim_name = "Sim256"
 
-user_dict, cosmo_dict = load_dict(sim_name,machine)
+user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
 
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
-emergency_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/%s/z%.3f/"%('Sim256',1.)
+emergency_dir = "/global/cscratch1/sd/boryanah/data_hybrid/gadget/%s/z%.3f/"%('Sim256',z_nbody)
 
 Pk_hh = np.load(data_dir+"Pk_hh.npy")
 ks = np.load(data_dir+"ks.npy")

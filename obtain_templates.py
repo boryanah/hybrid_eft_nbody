@@ -16,6 +16,8 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 def get_templates():
+    # redshift choice
+    z_nbody = 1.1
     
     #machine = 'alan'
     machine = 'NERSC'
@@ -23,7 +25,7 @@ def get_templates():
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     #sim_name = 'Sim256'
 
-    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
     interlaced = user_dict['interlaced']
     dens_dir = user_dict['dens_dir']
     data_dir = user_dict['data_dir']

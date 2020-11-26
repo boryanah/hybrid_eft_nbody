@@ -38,15 +38,18 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
     return
 
 def get_positions():
+    # redshift choice
+    zs = [1., 0.7, 0.3, 0.]
+    z_nbody = zs[3]
     
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
-    sim_name = "AbacusSummit_hugebase_c000_ph000"
-    #sim_name = 'Sim256'
+    #sim_name = "AbacusSummit_hugebase_c000_ph000"
+    sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
-    user_dict, cosmo_dict = load_dict(sim_name,machine)
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
     interlaced = user_dict['interlaced']
     dens_dir = user_dict['dens_dir']
     data_dir = user_dict['data_dir']
@@ -91,7 +94,7 @@ def get_positions():
     # loop over all chunks
     for i_chunk in range(n_chunks):
         #if (rank-1) != i_chunk%size: continue # relevant if broadcasting in root though not really
-        if rank != i_chunk%size: continue
+        #if rank != i_chunk%size: continue
         print("saving chunk number %d out of %d chunks"%(i_chunk,n_chunks))
         
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):

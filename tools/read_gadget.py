@@ -126,7 +126,7 @@ def read_snap(snap_fns,i_chunk,n_chunks):
 def read_gadget(ic_fns,snap_fns,halo_fns,i_chunk,n_chunks):
     pos_ic = read_ic(ic_fns,i_chunk,n_chunks)
     pos_snap = read_snap(snap_fns,i_chunk,n_chunks)
-    pos_halo, m_halo = read_halo(halo_fns,i_chunk,n_chunks)
+    pos_halo, m_halo = read_halo_gadget(halo_fns,i_chunk,n_chunks)
     return pos_ic, pos_snap, pos_halo, m_halo
 
 def read_gadget_all(ic_fns,snap_fns,halo_fns,i_chunk):
