@@ -15,7 +15,7 @@ fit_type = 'power_hh'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
 k_max = 0.3
-k_min = 0.
+k_min = 1.e-5
 fit_shotnoise = False
 
 # redshift choice
@@ -79,8 +79,14 @@ for i in range(len(sf)):
     except:
         lpk_array = log_pk
 
-# OK, let's first read off the matter power spectrum:
-#lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in sf]))
+# testing
+#z = np.linspace(0,1.2,1024)
+#sf = 1./(1+z)
+#sf = sf[::-1]
+#ks = np.logspace(-5,2,512)
+
+# simple power spectrum for testing
+lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in sf]))
 
 # Create a Pk2D object
 pk_tmp = ccl.Pk2D(a_arr=sf, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
@@ -89,8 +95,8 @@ pk_tmp = ccl.Pk2D(a_arr=sf, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
 ells = np.geomspace(2,1000,20)
 
 # Compute power spectra with and without cutoff
-#cl_hh_tmp = ccl.angular_cl(cosmo, halos, halos, ells, p_of_k_a=pk_tmp)
 cl_hh = ccl.angular_cl(cosmo, halos, halos, ells)
+cl_hh_tmp = ccl.angular_cl(cosmo, halos, halos, ells, p_of_k_a=pk_tmp)
 
 
 # Let's plot the result
@@ -100,6 +106,7 @@ plt.xscale('log')
 plt.xlabel('$\\ell$', fontsize=14)
 plt.ylabel('$10^4\\times C_\\ell$', fontsize=14)
 plt.legend(loc='upper right', fontsize=12, frameon=False)
+plt.savefig("figs/Cls.png")
 plt.show()
 
 quit()
