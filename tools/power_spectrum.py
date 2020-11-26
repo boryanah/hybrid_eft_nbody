@@ -33,11 +33,17 @@ def CompensateTSC(w, v):
         v = v / tmp
         return v
 
-def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced):
+def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
 
     # create catalog from fitsfile
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
-    
+
+    if m_thr is not None:
+        mass = cat['Mass']
+        choice = mass > m_thr
+        cat = cat[choice]
+        print("masked")
+        
     mesh = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
     compensation = CompensateTSC # mesh.CompensateTSC not working
     mesh = mesh.apply(compensation, kind='circular', mode='complex')
@@ -150,14 +156,14 @@ def get_Pk_arr(pos1,N_dim,Lbox,interlaced,dk=None,pos2=None):
     Pk -= P_sn
     return ks, Pk
 
-def get_Pk(pos1_fns,N_dim,Lbox,interlaced,dk=None,pos2_fns=None):
+def get_Pk(pos1_fns,N_dim,Lbox,interlaced,dk=None,pos2_fns=None,m_thr=None):
     # calculate power spectrum of the galaxies or halos
-    mesh1 = get_mesh(pos1_fns,N_dim,Lbox,interlaced)
+    mesh1 = get_mesh(pos1_fns,N_dim,Lbox,interlaced,m_thr)
 
     if pos2_fns is None:
         mesh2 = None
     else:
-        mesh2 = get_mesh(pos2_fns,N_dim,Lbox,interlaced)
+        mesh2 = get_mesh(pos2_fns,N_dim,Lbox,interlaced,m_thr)
         
     # obtain the "truth"
     r = FFTPower(first=mesh1, second=mesh2, mode='1d', dk=dk)

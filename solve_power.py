@@ -17,24 +17,28 @@ k_max = 0.3
 k_min = 0.
 fit_shotnoise = False
 
-machine = 'alan'
-#machine = 'NERSC'
+#machine = 'alan'
+machine = 'NERSC'
 
-#sim_name = "AbacusSummit_hugebase_c000_ph000"
-sim_name = "Sim256"
+sim_name = "AbacusSummit_hugebase_c000_ph000"
+#sim_name = "Sim256"
 
 # load parameters
 user_dict, cosmo_dict = load_dict(sim_name,machine)
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
+# which halo files are we loading
+sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
+halo_dir = data_dir.replace(sim_name,sim_name_halo)
+
 # load power spectra
-#Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
-#Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
-Pk_hh = np.load(data_dir+"Pk_hh.npy")
+#Pk_hh = np.load(data_dir+"Pk_hh.npy")
+Pk_hh = np.load(halo_dir+"Pk_hh.npy")
 Pk_mm = np.load(data_dir+"Pk_mm.npy")
 Pk_hm = np.load(data_dir+"Pk_hm.npy")
 ks = np.load(data_dir+"ks.npy")
+N_modes = len(ks)
 
 # apply cuts to the data
 k_cut = (ks < k_max) & (ks >= k_min)
@@ -43,10 +47,15 @@ Pk_mm = Pk_mm[k_cut]
 Pk_hm = Pk_hm[k_cut]
 ks = ks[k_cut]
 
+print("err/true = ",np.sqrt(2./N_modes))
 # load errorbars for plotting
-Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
-Pk_hh_err = Pk_hh_err[k_cut]
-Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
+#Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
+Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
+#Pk_hh_err[ks < 0.01] = 0.01*Pk_hh[ks < 0.01]
+#Pk_hh_err = Pk_hh_err[k_cut]
+Pk_hm_err = np.sqrt((Pk_hm**2+Pk_hh*Pk_mm)/N_modes)
+#Pk_hm_err[ks < 0.01] = 0.01*Pk_hm[ks < 0.01]
+#np.load(data_dir+"Pk_hm_err.npy")
 #Pk_hm_err = Pk_hm_err[k_cut]
 
 # combine the ratios
@@ -54,11 +63,7 @@ Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
 if fit_type == 'power_hh':
     Pk_hh = Pk_hh
     Pk_hh_err = Pk_hh_err
-    Pk_hh_err[0] = 1.e-6
-
-    # TESTING
-    #Pk_hh_err = np.hstack((Pk_hh_err,np.ones(len(Pk_hh))*1.e-6))
-    
+    Pk_hh_err[0] = 1.e-6    
     cov = np.diag(Pk_hh_err)
 elif fit_type == 'power_both':
     Pk = np.hstack((Pk_hh,Pk_hm))
@@ -95,7 +100,11 @@ Pk_all = Pk_all[:,k_cut]
         
 def get_P(F_this,k_length):
     P_guess = np.zeros(k_length)
-    P_hat = np.zeros((k_length,len(F_this)))
+
+    # og
+    #P_hat = np.zeros((k_length,len(F_this)))
+    # TESTING setting F[0] = 1
+    P_hat = np.zeros((k_length,len(F_this)-1))
     for i in range(len(F_this)):
         P_hat_i = np.zeros(k_length)
         for j in range(len(F_this)):
@@ -106,7 +115,11 @@ def get_P(F_this,k_length):
             P_guess += f_i*f_j*P_ij
             P_hat_i += f_j*P_ij
 
-        P_hat[:,i] = P_hat_i
+        # TESTING setting F[0] = 1
+        if i == 0: continue
+        P_hat[:,i-1] = P_hat_i
+        # og
+        #P_hat[:,i] = P_hat_i
     return P_guess, P_hat 
 
 # initial guess
@@ -134,7 +147,8 @@ for i in range(len(F)):
         if i != j: Pk_ij[j,i,:] = Pk_all[c]
         c += 1
 
-while err > tol:
+while err > tol and iteration < 1000:
+    # P_hat
     P_guess, P_hat = get_P(F,k_length)
     P_hh = Pk_hh - P_guess
     if fit_shotnoise:
@@ -148,10 +162,16 @@ while err > tol:
             P_hat = np.vstack((P_hat.T,Pk_const)).T
     elif fit_type == 'power_both':
         P_h = np.hstack((P_hh,P_hm)).T
-        P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,:,:].T))
+        # og
+        #P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,:,:].T))
+        # TESTING  setting F[0] = 1
+        P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,1:,:].T))
     elif fit_type == 'power_hm':
         P_h = P_hm
-        P_hat = F[0]*Pk_ij[0,:,:].T
+        # og
+        #P_hat = F[0]*Pk_ij[0,:,:].T
+        # TESTING  setting F[0] = 1
+        P_hat = F[0]*Pk_ij[0,1:,:].T
 
     # solve matrix equation
     PTiCov = np.dot(P_hat.T,icov)
@@ -160,7 +180,11 @@ while err > tol:
 
     # save new values
     F_old = F.copy()
-    F += 0.1 * alpha[:len(F_old)]
+
+    # TESTING  setting F[0] = 1
+    F[1:] += 0.1 * alpha[:len(F_old)-1]
+    # og
+    #F += 0.1 * alpha[:len(F_old)]
     err = np.sum(((F-F_old)/F)**2)
     
     if fit_shotnoise:
@@ -168,7 +192,7 @@ while err > tol:
         f_shot_old = f_shot
         f_shot += 0.1*alpha[-1]
         err += ((f_shot-f_shot_old))**2
-
+        
     # compute error
     err = np.sqrt(err)
 
@@ -186,7 +210,15 @@ Pk_hm_best = P_hat[:,0]
 #Pk_hm_best = Pk_hm_best[k_cut]
 
 # plot fit
-plt.figure(1)
+plt.figure(1,figsize=(12,8))
+fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
+for i in range(len(F)):
+    for j in range(len(F)):
+        if i > j: continue
+        label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
+        Pk_tmp = Pk_ij[i,j,:]*F[i]*F[j]
+        plt.plot(ks,Pk_tmp,ls='--',lw=1.,label=label)
+
 plt.errorbar(ks,Pk_hh,yerr=Pk_hh_err,color='black',label='halo-halo',zorder=1)
 plt.plot(ks,Pk_hh_best,color='dodgerblue',label='halo-halo fit',zorder=2)
 plt.xscale('log')
@@ -194,7 +226,7 @@ plt.yscale('log')
 plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
 plt.ylabel(r"$P(k)$")
 plt.legend()
-plt.savefig("figs/Pk_hh_fit.png")
+plt.savefig("figs/Pk_hh_fit.pdf")
 
 plt.figure(2)
 plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter',zorder=1)
@@ -204,5 +236,5 @@ plt.yscale('log')
 plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
 plt.ylabel(r"$P(k)$")
 plt.legend()
-plt.savefig("figs/Pk_hm_fit.png")
-plt.show()
+plt.savefig("figs/Pk_hm_fit.pdf")
+#plt.show()

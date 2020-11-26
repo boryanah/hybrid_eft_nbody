@@ -50,7 +50,7 @@ def get_density(dens_dir,Lbox,ppd,want_show=False):
 
     return dens
 
-def read_halo(halo_fns,i_chunk,n_chunks,read_header=False):
+def read_halo_gadget(halo_fns,i_chunk,n_chunks,read_header=False):
     # load the halo positions
     hdul = fits.open(halo_fns[i_chunk%len(halo_fns)])
     header = hdul[0].header
@@ -61,6 +61,7 @@ def read_halo(halo_fns,i_chunk,n_chunks,read_header=False):
     X = data['PX_CM']
     Y = data['PY_CM']
     Z = data['PZ_CM']
+    m_halo = data['MASS']# TESTING
     del data
     pos_halo = np.vstack((X,Y,Z)).T
 
@@ -68,13 +69,14 @@ def read_halo(halo_fns,i_chunk,n_chunks,read_header=False):
     if len(halo_fns) != n_chunks and len(halo_fns) == 1:
         len_chunk = pos_halo.shape[0]//n_chunks
         pos_halo = pos_halo[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+        m_halo = m_halo[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
     elif len(halo_fns) != n_chunks:
         print("Something's up with your chunks: ",len(halo_fns),n_chunks);exit()
     
     if read_header:
-        return pos_halo, header
+        return pos_halo, m_halo, header
     
-    return pos_halo
+    return pos_halo, m_halo
 
 def read_ic(ic_fns,i_chunk,n_chunks):
     # load the IC catalog
@@ -124,8 +126,8 @@ def read_snap(snap_fns,i_chunk,n_chunks):
 def read_gadget(ic_fns,snap_fns,halo_fns,i_chunk,n_chunks):
     pos_ic = read_ic(ic_fns,i_chunk,n_chunks)
     pos_snap = read_snap(snap_fns,i_chunk,n_chunks)
-    pos_halo = read_halo(halo_fns,i_chunk,n_chunks)
-    return pos_ic, pos_snap, pos_halo
+    pos_halo, m_halo = read_halo(halo_fns,i_chunk,n_chunks)
+    return pos_ic, pos_snap, pos_halo, m_halo
 
 def read_gadget_all(ic_fns,snap_fns,halo_fns,i_chunk):
 

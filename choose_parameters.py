@@ -5,9 +5,10 @@ import asdf
 
 def load_dict(sim_name,machine):
     # user choices
-    z_nbody = 1.
+    z_nbody = 1.1
     R_smooth = 4.
     interlaced = True
+    m_threshold = 1.e13
     
     if 'Abacus' in sim_name:
         sim_code = 'abacus'
@@ -35,6 +36,7 @@ def load_dict(sim_name,machine):
 
         Lbox = header['BoxSize']
         ppd = header['ppd']
+        m_part = header['ParticleMassHMsun']
         #ppd = int(np.round(header['NP']**(1/3.)))
         N_dim = 1152
         z_ic = 99
@@ -101,10 +103,13 @@ def load_dict(sim_name,machine):
                  'R_smooth': R_smooth,
                  'sim_code': sim_code,
                  'sim_name': sim_name,
-                 'interlaced': interlaced}
+                 'interlaced': interlaced,
+                 'mass_threshold': m_threshold}
 
     # special fields
     if sim_code == 'gadget':
         user_dict['ind_snap'] = ind_dict_gadget['%.3f'%(z_nbody)]
+    elif sim_code == 'abacus':
+        user_dict['m_part'] = m_part
     
     return user_dict, cosmo_dict

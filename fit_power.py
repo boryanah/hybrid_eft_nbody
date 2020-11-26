@@ -21,18 +21,22 @@ machine = 'alan'
 #sim_name = "AbacusSummit_hugebase_c000_ph000"
 sim_name = "Sim256"
 
+# which halo files are we loading TESTING
+sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
+halo_dir = data_dir.replace(sim_name,sim_name_halo)
+
 # load parameters
 user_dict, cosmo_dict = load_dict(sim_name,machine)
 R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
 # load power spectra
-#Pk_hh = np.load(data_dir+"Pk_hh_mean.npy")
-#Pk_hh = np.load(data_dir+"Pk_hh-sn.npy")
-Pk_hh = np.load(data_dir+"Pk_hh.npy")
+#Pk_hh = np.load(data_dir+"Pk_hh.npy")
+Pk_hh = np.load(halo_dir+"Pk_hh.npy")
 Pk_mm = np.load(data_dir+"Pk_mm.npy")
 Pk_hm = np.load(data_dir+"Pk_hm.npy")
 ks = np.load(data_dir+"ks.npy")
+N_modes = len(ks)
 
 # apply cuts to the data
 k_cut = (ks < k_max) & (ks >= k_min)
@@ -42,9 +46,13 @@ Pk_hm = Pk_hm[k_cut]
 ks = ks[k_cut]
 
 # load errorbars for plotting
-Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
-Pk_hh_err = Pk_hh_err[k_cut]
-Pk_hm_err = Pk_hm*0.3#np.load(data_dir+"Pk_hm_err.npy")
+#Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
+Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
+Pk_hh_err[ks < 0.01] = 0.01*Pk_hh[ks < 0.01]
+#Pk_hh_err = Pk_hh_err[k_cut]
+Pk_hm_err = np.sqrt((Pk_hm**2+Pk_hh*Pk_mm)/N_modes)
+Pk_hm_err[ks < 0.01] = 0.01*Pk_hm[ks < 0.01]
+#np.load(data_dir+"Pk_hm_err.npy")
 #Pk_hm_err = Pk_hm_err[k_cut]
 
 # combine the ratios
