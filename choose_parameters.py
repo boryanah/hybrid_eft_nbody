@@ -5,7 +5,8 @@ import asdf
 
 def load_dict(z_nbody,sim_name,machine):
     # user choices
-    R_smooth = 4.
+    R_smooth = 2.
+    #R_smooth = 4.
     interlaced = True
     m_threshold = 1.e13
     
@@ -74,6 +75,7 @@ def load_dict(z_nbody,sim_name,machine):
             N_dim = 256
             ppd = 256
             Lbox = 175.
+            #n_chunks = 2
             n_chunks = 1
         elif sim_name == 'Sim1024':
             N_dim = 1024

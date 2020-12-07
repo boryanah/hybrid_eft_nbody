@@ -8,7 +8,7 @@ from memory_profiler import memory_usage
 from nbodykit.lab import *
 #from nbodykit.utils import ScatterArray # can't broadcast, only parts
 
-from tools.compute_fields import load_field_bigfile
+from tools.compute_fields import load_field_bigfile, load_field_chunk_bigfile
 from tools.read_abacus import read_abacus
 from tools.read_gadget import read_gadget
 from choose_parameters import load_dict
@@ -37,16 +37,19 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
     fitsio.write(data_dir+"pos_"+type_pos+".fits", data, extname='Data')
     return
 
-def get_positions():
+def main():
     # redshift choice
     zs = [1., 0.7, 0.3, 0.]
     z_nbody = zs[3]
-    
-    machine = 'alan'
-    #machine = 'NERSC'
 
-    #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = 'Sim256'
+    z_nbody = 1.1
+    
+    #machine = 'alan'
+    machine = 'NERSC'
+
+    want_chunk = True
+    sim_name = "AbacusSummit_hugebase_c000_ph000"
+    #sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
     user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -72,20 +75,16 @@ def get_positions():
     D_z_ic = ccl.growth_factor(cosmo,1./(1+z_nbody))
     D_growth = D_z_nbody/D_z_ic
 
-    # I don't think broadcasting makes sense, might somehow be able to allocate the data better with more ranks?
-    '''
-    if rank == 0:
+    if want_chunk:
         fields = {}
         for i in range(len(field_names)):
-            fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
+            fields[field_names[i]], start_pos, end_pos = load_field_chunk_bigfile(field_names[i], dens_dir, R_smooth, rank, n_chunks, Lbox)
+        print("loaded fields")
     else:
-        fields = None
-    fields = comm.bcast(fields,root=0)
-    '''
-    fields = {}
-    for i in range(len(field_names)):
-        fields[field_names[i]] = load_field_bigfile(field_names[i],dens_dir,R_smooth)
-    print("loaded fields")
+        fields = {}
+        for i in range(len(field_names)):
+            fields[field_names[i]] = load_field_bigfile(field_names[i], dens_dir, R_smooth)
+        print("loaded fields")    
     
     # create directory if it does not exist
     if not os.path.exists(data_dir):
@@ -93,8 +92,7 @@ def get_positions():
 
     # loop over all chunks
     for i_chunk in range(n_chunks):
-        #if (rank-1) != i_chunk%size: continue # relevant if broadcasting in root though not really
-        #if rank != i_chunk%size: continue
+        if rank != i_chunk%size: continue
         print("saving chunk number %d out of %d chunks"%(i_chunk,n_chunks))
         
         if os.path.exists(data_dir+"pos_s_sq_snap_%03d.fits"%i_chunk):
@@ -122,10 +120,21 @@ def get_positions():
             print(snap_fns)
             print(fof_fns)
             
-            lagr_pos, pos_snap, pos_halo, m_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk,n_chunks)
+            lagr_pos, pos_snap, pos_halo, m_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk,n_chunks,want_chunk=want_chunk)
 
         save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir,mass=m_halo)
         del pos_halo, m_halo
+
+        # offset the positions to match the chunk
+        if want_chunk:
+            if start_pos < end_pos:
+                lagr_pos[:,0] -= start_pos
+            else:
+                choice1 = (start_pos <= lagr_pos[:,0]) & (lagr_pos[:,0] < Lbox)
+                choice2 = (end_pos > lagr_pos[:,0]) & (lagr_pos[:,0] >= 0)  
+
+                lagr_pos[choice1,0] -= start_pos
+                lagr_pos[choice2,0] += Lbox-start_pos
 
         # get i, j, k for position on the density array
         lagr_ijk = (lagr_pos/(Lbox/N_dim)).astype(int)%N_dim
@@ -135,6 +144,7 @@ def get_positions():
         save_pos(pos_snap,"ones_snap_%03d"%i_chunk,data_dir)
         for key in fields.keys():
             values = (fields[key]*D_growth**factors[key])[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
+       
             save_pos(pos_snap,key+"_snap_%03d"%i_chunk,data_dir,value=values)
         del pos_snap, lagr_ijk
     print("Saved all particle and halo positions")
@@ -143,8 +153,8 @@ def get_positions():
 if __name__ == "__main__":
 
     t1 = time.time()
-    #get_positions()
-    mem_usage = memory_usage(get_positions,interval=1., timeout=None)
+    #main()
+    mem_usage = memory_usage(main,interval=1., timeout=None)
     #print('Memory usage (in chunks of .1 seconds): %s MB' % mem_usage)
     print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)

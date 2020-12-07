@@ -209,12 +209,19 @@ while err > tol and iteration < 1000:
 print("Fitting type = ",fit_type)
 print("Finished in %d iterations with bias values of "%iteration,F.T,f_shot)
 
+#F = np.array([1.,35.440,-102.07,227.8,30])
+
 # compute power spectrum for best-fit
 P_guess, P_hat = get_P(F,k_length)
 Pk_hh_best = P_guess
 #Pk_best = Pk_best[k_cut]
 Pk_hm_best = P_hat[:,0]
 #Pk_hm_best = Pk_hm_best[k_cut]
+
+delta = Pk_hh_best-Pk_hh
+lnprob = np.einsum('i,ij,j',delta, icov, delta)
+lnprob *= -0.5 
+print("lnprob = ", lnprob)
 
 # plot fit
 plt.figure(1,figsize=(12,8))

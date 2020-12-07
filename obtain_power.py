@@ -10,14 +10,14 @@ from nbodykit.source.catalog import FITSCatalog
 from tools.power_spectrum import get_Pk
 from choose_parameters import load_dict
 
-def get_power():
+def main():
     # redshift choice
     #z_nbody = 1.1
     zs = [1.,0.7,0.3,0.]
     z_nbody = zs[3]
     
-    #compute_pks = ['Pk_hh', 'Pk_hm', 'Pk_mm']
-    compute_pks = ['Pk_hh']
+    compute_pks = ['Pk_hh', 'Pk_hm', 'Pk_mm']
+    #compute_pks = ['Pk_hh']
 
     machine = 'alan'
     #machine = 'NERSC'
@@ -62,7 +62,7 @@ def get_power():
 if __name__ == "__main__":
 
     t1 = time.time()
-    get_power()
-    #mem_usage = memory_usage(get_power(),interval=1., timeout=None)
+    main()
+    #mem_usage = memory_usage(main(),interval=1., timeout=None)
     #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)

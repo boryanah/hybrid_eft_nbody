@@ -15,7 +15,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def get_templates():
+def main():
     # redshift choice
     z_nbody = 1.1
     
@@ -61,8 +61,8 @@ def get_templates():
 if __name__ == "__main__":
 
     t1 = time.time()
-    get_templates()
-    #mem_usage = memory_usage(get_templates(),interval=1., timeout=None)
+    main()
+    #mem_usage = memory_usage(main(),interval=1., timeout=None)
     #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)
     

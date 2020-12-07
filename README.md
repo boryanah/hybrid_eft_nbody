@@ -20,9 +20,12 @@ obtain_halo_positions, plot_templates and plot_density
 
 # Memory usage:
 
-convert to bigfile and compute fields for Sim1024 took 2663s on the login node (fell asleep! wasn't on purpose) 
+convert to bigfile and compute fields for Sim1024 took 2663s on the login node (fell asleep! wasn't on purpose)
 
-requested 45 GB for summit hugebase obtain pisitions serially on debug about 15 mins per snapshot; took 70 mins total for 9 snapshots
+Summit hugebase obtain fields only 11352 took 1847. seconds
+
+requested 45 GB for summit hugebase obtain pisitions serially on debug about 15 mins per snapshot; took 70 mins total for 9 snapshots; s_sq takes:
+25109 MB and 386 seconds
 
 obtain templates took 512 GB on 8 nodes 4 tasks per node (64 GB per node) and 26 mins (requested roughly twice the memory loaded)
 

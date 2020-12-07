@@ -37,7 +37,7 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
     fitsio.write(data_dir+"pos_"+type_pos+str_mthr+".fits", data, extname='Data')
     return
 
-def get_positions():
+def main():
     # redshift of snapshots
     zs = [1., 0.7, 0.3, 0.]
     z_nbody = zs[0]
@@ -90,9 +90,9 @@ def get_positions():
 if __name__ == "__main__":
 
     t1 = time.time()
-    #get_positions()
-    get_positions()
-    #mem_usage = memory_usage(get_positions,interval=1., timeout=None)
+    #main()
+    main()
+    #mem_usage = memory_usage(main,interval=1., timeout=None)
     #print('Memory usage (in chunks of .1 seconds): %s MB' % mem_usage)
     #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)

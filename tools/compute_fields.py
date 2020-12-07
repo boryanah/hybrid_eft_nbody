@@ -4,6 +4,7 @@ import pyccl as ccl
 import os
 from numba import jit
 import numba as nb
+import bigfile
 
 from nbodykit.filters import Gaussian 
 from nbodykit.lab import *
@@ -89,37 +90,45 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     del s_sq
 
 def load_field_bigfile(field_name,dens_dir,R_smooth):
-    if field_name == 'delta':
-        return load_delta_bigfile(dens_dir,R_smooth)
-    if field_name == 'delta_sq':
-        return load_delta_sq_bigfile(dens_dir,R_smooth)
-    if field_name == 's_sq':
-        return load_s_sq_bigfile(dens_dir,R_smooth)
-    if field_name == 'nabla_sq':
-        return load_nabla_sq_bigfile(dens_dir,R_smooth)
-    if field_name == 'mnabla_sq':
-        return load_mnabla_sq_bigfile(dens_dir,R_smooth)
-
-def load_s_sq_bigfile(dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+"s_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
+    mesh = BigFileMesh(dens_dir+field_name+"_%d.bigfile"%R_smooth, mode='real', dataset='Field')
     return mesh.paint(mode='real')
 
-def load_nabla_sq_bigfile(dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+"nabla_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
-    return mesh.paint(mode='real')
 
-def load_mnabla_sq_bigfile(dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+"mnabla_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
-    return mesh.paint(mode='real')
+def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, i_chunk, n_chunks, Lbox, padding=30.):
+    data = bigfile.File(dens_dir+field_name+"_%d.bigfile"%R_smooth)['Field']
+    n_gr = int(np.round(data.size**(1./3)))
 
-def load_delta_sq_bigfile(dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+"delta_sq_%d.bigfile"%R_smooth, mode='real', dataset='Field')
-    return mesh.paint(mode='real')
+    grid_size = Lbox/n_gr
+    chunk_size = Lbox/n_chunks
+    assert grid_size < chunk_size, "The chunk size must be larger than the cell size"
 
-def load_delta_bigfile(dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+"delta_%d.bigfile"%R_smooth, mode='real', dataset='Field')
-    return mesh.paint(mode='real')
+    # starting and finishing index in the grid
+    i1, i2 = (np.array([i_chunk*chunk_size-padding,(i_chunk+1)*chunk_size+padding])//grid_size).astype(int)
 
+    # make sure within box
+    i1 %= n_gr
+    i2 %= n_gr
+    # get coordinates in the box of loaded field
+    start = (i1*grid_size)%n_gr
+    end = ((i2+1)*grid_size)%n_gr
+    # convert to indices in bigfile
+    i1 *= n_gr**2
+    i2 *= n_gr**2
+    if i1 > i2:
+        data1 = data[i1:]
+        data2 = data[:i2]
+
+        n = len(data1)+len(data2)
+        field_chunk = np.zeros(n,dtype=np.float32)
+
+        field_chunk[:len(data1)] = data1
+        field_chunk[len(data1):] = data2
+        del data1, data2
+        field_chunk = field_chunk.reshape((i2+1-i1,n_gr,n_gr))
+    else:
+        field_chunk = data[i1:i2].reshape((i2+1-i1,n_gr,n_gr))
+    
+    return field_chunk, start, end
 
 ##########################################
 ##########      OLD CODE      ############

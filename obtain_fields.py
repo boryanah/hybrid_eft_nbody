@@ -14,7 +14,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def calculate_fields():
+def main():
     # redshift choice (doesn't matter for the field calculation)
     z_nbody = 1.1
     
@@ -25,8 +25,8 @@ def calculate_fields():
     want_bigfile = True
     testing = 0
     
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     #sim_name = 'Sim256'
@@ -93,12 +93,12 @@ def calculate_fields():
 if __name__ == "__main__":
 
     t1 = time.time()
-    calculate_fields()
+    main()
 
     '''
     # doesn't actually work - perhaps different architecture
     p = Pool(10)    
-    p.starmap(calculate_fields, zip(repeat(1)))
+    p.starmap(main, zip(repeat(1)))
     p.close()
     p.join()
     '''

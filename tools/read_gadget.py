@@ -65,20 +65,20 @@ def read_halo_gadget(halo_fns,i_chunk,n_chunks,read_header=False):
     del data
     pos_halo = np.vstack((X,Y,Z)).T
 
+    assert (len(halo_fns) == 1 and len(halo_fns) != n_chunks) or len(halo_fns) == n_chunks,"Something's up with your chunks: %d %d"%(len(halo_fns),n_chunks) 
+    
     # check if number of chunks is equal to number of files
-    if len(halo_fns) != n_chunks and len(halo_fns) == 1:
+    if len(halo_fns) != n_chunks:
         len_chunk = pos_halo.shape[0]//n_chunks
         pos_halo = pos_halo[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
         m_halo = m_halo[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
-    elif len(halo_fns) != n_chunks:
-        print("Something's up with your chunks: ",len(halo_fns),n_chunks);exit()
     
     if read_header:
         return pos_halo, m_halo, header
     
     return pos_halo, m_halo
 
-def read_ic(ic_fns,i_chunk,n_chunks):
+def read_ic(ic_fns,i_chunk,n_chunks,x_inds=None):
     # load the IC catalog
     cat_ic = nbodykit.io.gadget.Gadget1File(ic_fns[i_chunk%len(ic_fns)])
         
@@ -89,16 +89,19 @@ def read_ic(ic_fns,i_chunk,n_chunks):
     pos_ic = cat_ic['Position'][:]
     del cat_ic
 
+    assert (len(ic_fns) == 1 and len(ic_fns) != n_chunks) or len(ic_fns) == n_chunks,"Something's up with your chunks: %d %d"%(len(ic_fns),n_chunks)
+    
     # check if number of chunks is equal to number of files
-    if len(ic_fns) != n_chunks and len(ic_fns) == 1:
-        len_chunk = pos_ic.shape[0]//n_chunks
-        pos_ic = pos_ic[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
-    elif len(ic_fns) != n_chunks:
-        print("Something's up with your chunks: ",len(ic_fns),n_chunks);exit()
+    if len(ic_fns) != n_chunks:
+        if x_inds is None:
+            len_chunk = pos_ic.shape[0]//n_chunks
+            pos_ic = pos_ic[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+        else:
+            pos_ic = pos_ic[x_inds]
     
     return pos_ic
 
-def read_snap(snap_fns,i_chunk,n_chunks):    
+def read_snap(snap_fns,i_chunk,n_chunks,want_chunk=False):
     # load the snapshot catalog
     cat_snap = nbodykit.io.gadget.Gadget1File(snap_fns[i_chunk%len(snap_fns)])
     
@@ -113,22 +116,37 @@ def read_snap(snap_fns,i_chunk,n_chunks):
     pos_snap = pos_snap[i_sort_snap]
     del i_sort_snap
 
-    # check if number of chunks is equal to number of files
-    if len(snap_fns) != n_chunks and len(snap_fns) == 1:
-        len_chunk = pos_snap.shape[0]//n_chunks
-        pos_snap = pos_snap[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
-    elif len(snap_fns) != n_chunks:
-        print("Something's up with your chunks: ",len(snap_fns),n_chunks);exit()
+    assert (len(snap_fns) == 1 and len(snap_fns) != n_chunks) or len(snap_fns) == n_chunks,"Something's up with your chunks: %d %d"%(len(snap_fns),n_chunks)
     
+    # check if number of chunks is equal to number of files
+    if len(snap_fns) != n_chunks:
+        len_chunk = pos_snap.shape[0]//n_chunks
+        if want_chunk:
+            Lbox = 175
+            print("WE ARE MAKING STUFF UP FOR TESTING ON SIM256")
+            size_chunk = Lbox/n_chunks
+            x_sel = (pos_snap[:,0] < i_chunk*size_chunk) & (pos_snap[:,0] < (i_chunk+1)*size_chunk)
+            inds_sel = np.zeros(len(x_sel),dtype=int)[x_sel]
+            pos_snap = pos_snap[inds_sel]
+            return pos_snap, inds_sel
+        else:
+            pos_snap = pos_snap[i_chunk*len_chunk:(i_chunk+1)*len_chunk]
+            
+            
     return pos_snap
 
 
-def read_gadget(ic_fns,snap_fns,halo_fns,i_chunk,n_chunks):
-    pos_ic = read_ic(ic_fns,i_chunk,n_chunks)
-    pos_snap = read_snap(snap_fns,i_chunk,n_chunks)
+def read_gadget(ic_fns,snap_fns,halo_fns,i_chunk,n_chunks,want_chunk=False):
+    if want_chunk:
+        pos_snap, x_inds = read_snap(snap_fns,i_chunk,n_chunks,want_chunk)
+        pos_ic = read_ic(ic_fns,i_chunk,n_chunks,x_inds)
+    else:
+        pos_snap = read_snap(snap_fns,i_chunk,n_chunks,want_chunk)
+        pos_ic = read_ic(ic_fns,i_chunk,n_chunks)
     pos_halo, m_halo = read_halo_gadget(halo_fns,i_chunk,n_chunks)
     return pos_ic, pos_snap, pos_halo, m_halo
 
+# OLD
 def read_gadget_all(ic_fns,snap_fns,halo_fns,i_chunk):
 
     hdul = fits.open(halo_fns[i_chunk])
