@@ -47,7 +47,7 @@ def main():
     #machine = 'alan'
     machine = 'NERSC'
 
-    want_chunk = True
+    want_chunk = False#True
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     #sim_name = 'Sim256'
     #sim_name = 'Sim1024'

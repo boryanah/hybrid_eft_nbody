@@ -43,6 +43,9 @@ def main():
     mesh_list = []
     for key in field_names:
         pos_snap_fns = sorted(glob.glob(data_dir+"pos_"+key+"_snap_*"))
+        # TESTING
+        print(pos_snap_fns)
+        print(len(pos_snap_fns))
         mesh = get_mesh(pos_snap_fns,N_dim,Lbox,interlaced)
         mesh_list.append(mesh)
     print("Obtained mesh lists for all fields")

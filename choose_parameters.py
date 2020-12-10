@@ -6,6 +6,7 @@ import asdf
 def load_dict(z_nbody,sim_name,machine):
     # user choices
     R_smooth = 2.
+    #R_smooth = 1. # TESTING
     #R_smooth = 4.
     interlaced = True
     m_threshold = 1.e13
@@ -37,8 +38,8 @@ def load_dict(z_nbody,sim_name,machine):
         Lbox = header['BoxSize']
         ppd = header['ppd']
         m_part = header['ParticleMassHMsun']
-        #ppd = int(np.round(header['NP']**(1/3.)))
         N_dim = 1152
+        #N_dim = 2304 # TESTING
         z_ic = 99
         
         # cosmology

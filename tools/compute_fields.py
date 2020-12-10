@@ -51,22 +51,26 @@ def filter_mnabla(k, v):
 def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     # load the density field
     density_ic = BigFileMesh(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
-
+    print("loaded the density field")
+    
     # get smoothed density in fourier space
     filter_gauss = Gaussian(R_smooth)
     d_smooth_four = density_ic.apply(filter_gauss, mode='complex', kind='wavenumber')
+    print("smoothed the density field")
     del density_ic
 
     # delta smooth and delta squared
     d_smooth = d_smooth_four.paint(mode='real')
     ArrayMesh(d_smooth,BoxSize=Lbox).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     ArrayMesh(d_smooth**2,BoxSize=Lbox).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    print("saved delta and delta_sq")
     del d_smooth
 
     # nabla squared
     nabla_sq = (d_smooth_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= np.mean(nabla_sq)
     ArrayMesh(nabla_sq,BoxSize=Lbox).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    print("saved nabla_sq")
     del nabla_sq
 
     # minus nabla squared
@@ -87,6 +91,7 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     del d_smooth_four
     s_sq -= np.mean(s_sq)
     ArrayMesh(s_sq,BoxSize=Lbox).save(dens_dir+"s_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    print("saved s_sq")
     del s_sq
 
 def load_field_bigfile(field_name,dens_dir,R_smooth):

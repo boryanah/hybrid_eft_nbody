@@ -25,8 +25,8 @@ def main():
     want_bigfile = True
     testing = 0
     
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     #sim_name = 'Sim256'

@@ -18,16 +18,16 @@ k_min = 0.
 fit_shotnoise = False
 
 # redshift choice
-#z_nbody = 1.1
-zs = [1.,0.7,0.3,0.]
-z_nbody = zs[0]
+z_nbody = 1.1
+#zs = [1.,0.7,0.3,0.]
+#z_nbody = zs[0]
 
 
-machine = 'alan'
-#machine = 'NERSC'
+#machine = 'alan'
+machine = 'NERSC'
 
-#sim_name = "AbacusSummit_hugebase_c000_ph000"
-sim_name = "Sim256"
+sim_name = "AbacusSummit_hugebase_c000_ph000"
+#sim_name = "Sim256"
 
 # load parameters
 user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -35,8 +35,9 @@ R_smooth = user_dict['R_smooth']
 data_dir = user_dict['data_dir']
 
 # which halo files are we loading
-#sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
-sim_name_halo = "Sim256"
+sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
+sim_name_halo = "AbacusSummit_hugebase_c000_ph000"
+#sim_name_halo = "Sim256"
 halo_dir = data_dir.replace(sim_name,sim_name_halo)
 
 # load power spectra

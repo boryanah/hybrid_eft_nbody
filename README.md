@@ -26,6 +26,7 @@ Summit hugebase obtain fields only 11352 took 1847. seconds
 
 requested 45 GB for summit hugebase obtain pisitions serially on debug about 15 mins per snapshot; took 70 mins total for 9 snapshots; s_sq takes:
 25109 MB and 386 seconds
+42670.98046875 MB in t =  1115.3992731571198 for 6th iteration for hugebase
 
 obtain templates took 512 GB on 8 nodes 4 tasks per node (64 GB per node) and 26 mins (requested roughly twice the memory loaded)
 

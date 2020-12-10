@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from choose_parameters import load_dict
 
 # redshift choice
-z_nbody = 1.
+z_nbody = 1.1
 
 machine = 'alan'
 machine = 'NERSC'
