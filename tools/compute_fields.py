@@ -61,15 +61,15 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
 
     # delta smooth and delta squared
     d_smooth = d_smooth_four.paint(mode='real')
-    ArrayMesh(d_smooth,BoxSize=Lbox).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
-    ArrayMesh(d_smooth**2,BoxSize=Lbox).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    FieldMesh(d_smooth).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    FieldMesh(d_smooth**2).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved delta and delta_sq")
     del d_smooth
 
     # nabla squared
     nabla_sq = (d_smooth_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= np.mean(nabla_sq)
-    ArrayMesh(nabla_sq,BoxSize=Lbox).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    FieldMesh(nabla_sq).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved nabla_sq")
     del nabla_sq
 
@@ -77,7 +77,7 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     '''
     nabla_sq = (d_smooth_four.apply(filter_mnabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= np.mean(nabla_sq)
-    ArrayMesh(nabla_sq,BoxSize=Lbox).save(dens_dir+"mnabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    FieldMesh(nabla_sq).save(dens_dir+"mnabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     del nabla_sq
     '''
     
@@ -90,7 +90,7 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
            2.*(d_smooth_four.apply(filter_tyz, mode='complex', kind='wavenumber')).paint(mode='real')**2
     del d_smooth_four
     s_sq -= np.mean(s_sq)
-    ArrayMesh(s_sq,BoxSize=Lbox).save(dens_dir+"s_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    FieldMesh(s_sq).save(dens_dir+"s_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved s_sq")
     del s_sq
 

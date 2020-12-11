@@ -2,6 +2,8 @@ import numpy as np
 import os
 from scipy.optimize import minimize
 import glob
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from tools.power_spectrum import predict_Pk, predict_Pk_cross
@@ -13,21 +15,22 @@ fit_type = 'power_hh'
 #fit_type = 'power_hm'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
-k_max = 0.3
+k_max = 0.5
 k_min = 0.
 fit_shotnoise = False
+fix_F0 = False#True#False
 
 # redshift choice
-z_nbody = 1.1
-#zs = [1.,0.7,0.3,0.]
-#z_nbody = zs[0]
+#z_nbody = 1.1
+zs = [1.,0.7,0.3,0.]
+z_nbody = zs[0]
 
 
-#machine = 'alan'
-machine = 'NERSC'
+machine = 'alan'
+#machine = 'NERSC'
 
-sim_name = "AbacusSummit_hugebase_c000_ph000"
-#sim_name = "Sim256"
+#sim_name = "AbacusSummit_hugebase_c000_ph000"
+sim_name = "Sim256"
 
 # load parameters
 user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -37,8 +40,118 @@ data_dir = user_dict['data_dir']
 # which halo files are we loading
 sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
 sim_name_halo = "AbacusSummit_hugebase_c000_ph000"
-#sim_name_halo = "Sim256"
+sim_name_halo = "Sim256"
 halo_dir = data_dir.replace(sim_name,sim_name_halo)
+
+
+def solve(Pk_hh_true, Pk_hm_true, cov, F_ini, k_length, tol, max_iter, fit_type, fix_f0):
+    err = 1.e9
+    iteration = 0
+    f_shot = 0.
+    F_old = np.ones((len(F_ini),1))*1.e9
+    F = F_ini
+    icov = np.linalg.inv(cov)
+    while err > tol and iteration < max_iter:
+        # P_hat
+        P_guess, P_hat = get_P(F,k_length,fix_f0)
+        P_hh = Pk_hh_true - P_guess
+        if fit_shotnoise:
+            P_sh = Pk_sh - f_shot*Pk_const
+            P_hh = P_hh_true - Pk_sh
+
+        # TESTING
+        P_hm = Pk_hm_true - np.dot(F.T,Pk_ij[0,:,:]).flatten()
+        #print(P_hat[:,0],np.dot(F.T,Pk_ij[0,:,:]).flatten())
+        
+        if fit_type == 'power_hh':
+            P_h = P_hh
+            if fit_shotnoise:
+                P_hat = np.vstack((P_hat.T,Pk_const)).T
+        elif fit_type == 'power_both':
+            P_h = np.hstack((P_hh,P_hm)).T
+
+            # if setting F[0] = 1
+            if fix_f0:
+                P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,1:,:].T))
+            else:
+                P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,:,:].T))
+        elif fit_type == 'power_hm':
+            P_h = P_hm
+
+            # if setting F[0] = 1
+            if fix_f0:
+                P_hat = F[0]*Pk_ij[0,1:,:].T
+            else:
+                P_hat = F[0]*Pk_ij[0,:,:].T
+
+        # solve matrix equation
+        PTiCov = np.dot(P_hat.T,icov)
+        iPTiCovP = np.linalg.inv(np.dot(PTiCov,P_hat))
+        alpha = np.dot(iPTiCovP,np.dot(PTiCov,P_h[:,None]))
+
+        # save new values
+        F_old = F.copy()
+
+        # if setting F[0] = 1
+        if fix_f0:
+            # alpha has 4 dimensions that need to be added to F
+            F[1:] += 0.1 * alpha#[:len(F_old)-1]
+        else:
+            F += 0.1 * alpha[:len(F_old)]
+            
+        err = np.sum(((F-F_old)/F)**2)
+
+        if fit_shotnoise:
+            P_hh -= Pk_sh-f_shot*Pk_const
+            f_shot_old = f_shot
+            f_shot += 0.1*alpha[-1]
+            err += ((f_shot-f_shot_old))**2
+
+        # compute error
+        err = np.sqrt(err)
+
+        # record iteration
+        iteration += 1
+
+
+    print("Fitting type = ",fit_type)
+    print("Finished in %d iterations with bias values of "%iteration,F.T,f_shot)
+    return F, f_shot
+
+
+def get_P(F_this,k_length,fix_f0):
+    P_guess = np.zeros(k_length)
+    
+    # if setting F[0] = 1
+    if fix_f0:
+        # we decrease the dimension since excluding F0
+        P_hat = np.zeros((k_length,len(F_this)-1))
+    else:
+        P_hat = np.zeros((k_length,len(F_this)))
+
+    for i in range(len(F_this)):
+        P_hat_i = np.zeros(k_length)
+        for j in range(len(F_this)):
+            # template cross correlating i and j fields
+            P_ij = Pk_ij[i,j,:]
+            # bias parameter fi, fj
+            f_i = F_this[i]
+            f_j = F_this[j]
+
+            # guess for the halo-halo power spectrum
+            P_guess += f_i*f_j*P_ij
+            # computing P^i = \sum fj Pij
+            P_hat_i += f_j*P_ij
+
+        # if setting F[0] = 1
+        if fix_f0:
+            # correct the indexing
+            if i == 0: continue
+            P_hat[:,i-1] = 2.*P_hat_i# TESTING
+        else:
+            P_hat[:,i] = 2.*P_hat_i # TESTING
+            
+    return P_guess, P_hat 
 
 # load power spectra
 #Pk_hh = np.load(data_dir+"Pk_hh.npy")
@@ -68,33 +181,27 @@ Pk_hm_err = np.sqrt((Pk_hm**2+Pk_hh*Pk_mm)/N_modes)
 
 # combine the ratios
 # TODO has to be done properly with jackknifing
-if fit_type == 'power_hh':
-    Pk_hh = Pk_hh
-    Pk_hh_err = Pk_hh_err
-    Pk_hh_err[0] = 1.e-6    
-    cov = np.diag(Pk_hh_err)
-elif fit_type == 'power_both':
-    Pk = np.hstack((Pk_hh,Pk_hm))
-    Pk_err = np.hstack((Pk_hh_err,Pk_hm_err))
-    Pk_err[len(Pk_hh)] = 1.e-6
-    cov = np.diag(Pk_err)
-elif fit_type == 'power_hm':
-    Pk = Pk_hm
-    Pk_err = Pk_hm_err
-    Pk_err[0] = 1.e-6
-    cov = np.diag(Pk_err)
-elif fit_type == 'ratio':
-    rat_hh = Pk_hh/Pk_mm
-    rat_hh_err = np.ones(len(rat_hh))*1.e-1
-    rat_hh_err[0] = 1.e-6
-    cov = np.diag(rat_hh_err)
-elif fit_type == 'ratio_both':
-    rat = np.hstack((Pk_hh/Pk_mm,Pk_hm/Pk_mm))
-    rat_err = np.ones(len(rat))*1.e-1
-    rat_err[0] = 1.e-6
-    rat_err[len(Pk_hh)] = 1.e-6
-    cov = np.diag(rat_err)
-icov = np.linalg.inv(cov)
+Pk_hh_err[0] = 1.e-6    
+cov_hh = np.diag(Pk_hh_err)
+
+Pk_both = np.hstack((Pk_hh,Pk_hm))
+Pk_both_err = np.hstack((Pk_hh_err,Pk_hm_err))
+Pk_both_err[len(Pk_hh)] = 1.e-6
+cov_both = np.diag(Pk_both_err)
+
+Pk_hm_err[0] = 1.e-6
+cov_hm = np.diag(Pk_hm_err)
+
+rat_hh = Pk_hh/Pk_mm
+rat_hh_err = np.ones(len(rat_hh))*1.e-1
+rat_hh_err[0] = 1.e-6
+cov_rat = np.diag(rat_hh_err)
+
+rat = np.hstack((Pk_hh/Pk_mm,Pk_hm/Pk_mm))
+rat_err = np.ones(len(rat))*1.e-1
+rat_err[0] = 1.e-6
+rat_err[len(Pk_hh)] = 1.e-6
+cov_rat_both = np.diag(rat_err)
 
 # load all 15 templates
 ks_all = np.load(data_dir+"ks_all.npy")
@@ -105,124 +212,61 @@ k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
 Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
 Pk_all = Pk_all[:,k_cut]
 #P_hat = Pk_all.T
-        
-def get_P(F_this,k_length):
-    P_guess = np.zeros(k_length)
 
-    # og
-    #P_hat = np.zeros((k_length,len(F_this)))
-    # TESTING setting F[0] = 1
-    P_hat = np.zeros((k_length,len(F_this)-1))
-    for i in range(len(F_this)):
-        P_hat_i = np.zeros(k_length)
-        for j in range(len(F_this)):
-            P_ij = Pk_ij[i,j,:]
-            f_i = F_this[i]
-            f_j = F_this[j]
-
-            P_guess += f_i*f_j*P_ij
-            P_hat_i += f_j*P_ij
-
-        # TESTING setting F[0] = 1
-        if i == 0: continue
-        P_hat[:,i-1] = P_hat_i
-        # og
-        #P_hat[:,i] = P_hat_i
-    return P_guess, P_hat 
-
-# initial guess
-F = np.ones((5,1))
-F_old = np.ones((5,1))*1.e9
-
-# choose tolerance
-tol = 1.e-3
-k_length = len(Pk_hh)
-err = 1.e9
-iteration = 0
 
 # shot noise params
-#Pk_sh = 1./n_bar # ideal shot noise
+#Pk_sh = 1./n_bar # analytical shot noise
 Pk_sh = 0. #  [note that we have already subtracted it from Pk_hh]
-f_shot = 0. # initial value
-Pk_const = np.ones(k_length)
+Pk_const = np.ones(len(Pk_hh))
+F_size = 5
 
-Pk_ij = np.zeros((len(F),len(F),k_length))
+Pk_ij = np.zeros((F_size,F_size,len(Pk_hh)))
 c = 0
-for i in range(len(F)):
-    for j in range(len(F)):
+for i in range(F_size):
+    for j in range(F_size):
         if i > j: continue
         Pk_ij[i,j,:] = Pk_all[c]
         if i != j: Pk_ij[j,i,:] = Pk_all[c]
         c += 1
 
-while err > tol and iteration < 1000:
-    # P_hat
-    P_guess, P_hat = get_P(F,k_length)
-    P_hh = Pk_hh - P_guess
-    if fit_shotnoise:
-        P_sh = Pk_sh - f_shot*Pk_const
-        P_hh = P_hh - Pk_sh
-    P_hm = Pk_hm - P_hat[:,0]
 
-    if fit_type == 'power_hh':
-        P_h = P_hh
-        if fit_shotnoise:
-            P_hat = np.vstack((P_hat.T,Pk_const)).T
-    elif fit_type == 'power_both':
-        P_h = np.hstack((P_hh,P_hm)).T
-        # og
-        #P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,:,:].T))
-        # TESTING  setting F[0] = 1
-        P_hat = np.vstack((P_hat,F[0]*Pk_ij[0,1:,:].T))
-    elif fit_type == 'power_hm':
-        P_h = P_hm
-        # og
-        #P_hat = F[0]*Pk_ij[0,:,:].T
-        # TESTING  setting F[0] = 1
-        P_hat = F[0]*Pk_ij[0,1:,:].T
+# solution params
+tol = 1.e-3 # choose tolerance
+F_start = np.ones((F_size,1)) # initial guess
+n_steps = 10
+max_iter = 1000
 
-    # solve matrix equation
-    PTiCov = np.dot(P_hat.T,icov)
-    iPTiCovP = np.linalg.inv(np.dot(PTiCov,P_hat))
-    alpha = np.dot(iPTiCovP,np.dot(PTiCov,P_h[:,None]))
-
-    # save new values
-    F_old = F.copy()
-
-    # TESTING  setting F[0] = 1
-    F[1:] += 0.1 * alpha[:len(F_old)-1]
-    # og
-    #F += 0.1 * alpha[:len(F_old)]
-    err = np.sum(((F-F_old)/F)**2)
-    
-    if fit_shotnoise:
-        P_hh -= Pk_sh-f_shot*Pk_const
-        f_shot_old = f_shot
-        f_shot += 0.1*alpha[-1]
-        err += ((f_shot-f_shot_old))**2
-        
-    # compute error
-    err = np.sqrt(err)
-
-    # record iteration
-    iteration += 1
-
-print("Fitting type = ",fit_type)
-print("Finished in %d iterations with bias values of "%iteration,F.T,f_shot)
-
-#F = np.array([1.,35.440,-102.07,227.8,30])
-
+# first solve varying all 5 parameters
+fix_F0 = True# False
+fit_type = 'power_hh'
+F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F_start, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+'''
+# next fix F0 and change it slowly until it gets to 1 and a stable solution is found
+fix_F0 = True
+#fit_type = 'power_hh'
+fit_type = 'power_both'
+print(F[0][0])
+step_size = (F[0][0]-1.)/n_steps
+for i in range(n_steps):
+    F[0][0] -= step_size
+    print(F)
+    #F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+    F, f_shot = solve(Pk_hh, Pk_hm, cov_both, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+'''
 # compute power spectrum for best-fit
-P_guess, P_hat = get_P(F,k_length)
+P_guess, P_hat = get_P(F,len(Pk_hh),fix_F0)
 Pk_hh_best = P_guess
 #Pk_best = Pk_best[k_cut]
-Pk_hm_best = P_hat[:,0]
+Pk_hm_best = np.dot(F.T,Pk_ij[0,:,:]).flatten()
+#P_hat[:,0]
 #Pk_hm_best = Pk_hm_best[k_cut]
 
+# compute the probability
 delta = Pk_hh_best-Pk_hh
-lnprob = np.einsum('i,ij,j',delta, icov, delta)
+lnprob = np.einsum('i,ij,j',delta, np.linalg.inv(cov_hh), delta)
 lnprob *= -0.5 
 print("lnprob = ", lnprob)
+
 
 # plot fit
 plt.figure(1,figsize=(12,8))

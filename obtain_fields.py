@@ -17,6 +17,8 @@ size = comm.Get_size()
 def main():
     # redshift choice (doesn't matter for the field calculation)
     z_nbody = 1.1
+    #zs = [1.,0.7,0.3,0.]
+    #z_nbody = zs[3]    
     
     #mode = 'convert_to_bigfile'
     #mode = 'resample'
