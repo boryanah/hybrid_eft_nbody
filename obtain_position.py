@@ -47,7 +47,7 @@ def main():
     #machine = 'alan'
     machine = 'NERSC'
 
-    want_chunk = False#True
+    want_chunk = True
     sim_name = "AbacusSummit_hugebase_c000_ph000"
     #sim_name = 'Sim256'
     #sim_name = 'Sim1024'
@@ -79,7 +79,7 @@ def main():
         fields = {}
         for i in range(len(field_names)):
             fields[field_names[i]], start_pos, end_pos = load_field_chunk_bigfile(field_names[i], dens_dir, R_smooth, rank, n_chunks, Lbox)
-        print("loaded fields")
+        print("loaded chunkwise fields")
     else:
         fields = {}
         for i in range(len(field_names)):
@@ -128,14 +128,17 @@ def main():
         # offset the positions to match the chunk
         if want_chunk:
             if start_pos < end_pos:
+                print("normal chunk",i_chunk)
                 lagr_pos[:,0] -= start_pos
             else:
+                print("subverted chunk",i_chunk)
                 choice1 = (start_pos <= lagr_pos[:,0]) & (lagr_pos[:,0] < Lbox)
                 choice2 = (end_pos > lagr_pos[:,0]) & (lagr_pos[:,0] >= 0)  
-
+                print("min max mean = ",np.min(lagr_pos[:,0]),np.max(lagr_pos[:,0]),np.mean(lagr_pos[:,0]))
                 lagr_pos[choice1,0] -= start_pos
                 lagr_pos[choice2,0] += Lbox-start_pos
-
+                print("min max mean = ",np.min(lagr_pos[:,0]),np.max(lagr_pos[:,0]),np.mean(lagr_pos[:,0]))
+                
         # get i, j, k for position on the density array
         lagr_ijk = (lagr_pos/(Lbox/N_dim)).astype(int)%N_dim
         del lagr_pos
@@ -153,9 +156,9 @@ def main():
 if __name__ == "__main__":
 
     t1 = time.time()
-    #main()
-    mem_usage = memory_usage(main,interval=1., timeout=None)
+    main()
+    #mem_usage = memory_usage(main,interval=1., timeout=None)
     #print('Memory usage (in chunks of .1 seconds): %s MB' % mem_usage)
-    print('Maximum memory usage: %s MB' % np.max(mem_usage))
+    #print('Maximum memory usage: %s MB' % np.max(mem_usage))
     t2 = time.time(); print("t = ",t2-t1)
     

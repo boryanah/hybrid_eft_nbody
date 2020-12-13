@@ -109,14 +109,16 @@ def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, i_chunk, n_chunks, 
 
     # starting and finishing index in the grid
     i1, i2 = (np.array([i_chunk*chunk_size-padding,(i_chunk+1)*chunk_size+padding])//grid_size).astype(int)
-
+    gr_depth = i2-i1
+    
     # make sure within box
     i1 %= n_gr
     i2 %= n_gr
     # get coordinates in the box of loaded field
-    start = (i1*grid_size)%n_gr
-    end = ((i2+1)*grid_size)%n_gr
+    start = (i1*grid_size)%Lbox
+    end = ((i2+1)*grid_size)%Lbox
     # convert to indices in bigfile
+    print("i_chunk, gr depth, n_gr, i1, i2, start, end = %d %.3f %d %d %d %.3f %.3f"%(i_chunk, gr_depth, n_gr, i1, i2, start, end))
     i1 *= n_gr**2
     i2 *= n_gr**2
     if i1 > i2:
@@ -126,12 +128,16 @@ def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, i_chunk, n_chunks, 
         n = len(data1)+len(data2)
         field_chunk = np.zeros(n,dtype=np.float32)
 
+        print("subverted i1 i2 n", i1, i2, n)
+        
         field_chunk[:len(data1)] = data1
         field_chunk[len(data1):] = data2
         del data1, data2
-        field_chunk = field_chunk.reshape((i2+1-i1,n_gr,n_gr))
+        # this
+        field_chunk = field_chunk.reshape((gr_depth,n_gr,n_gr))
     else:
-        field_chunk = data[i1:i2].reshape((i2+1-i1,n_gr,n_gr))
+        print("normal i1 i2", i1, i2)
+        field_chunk = data[i1:i2].reshape((gr_depth,n_gr,n_gr))
     
     return field_chunk, start, end
 
