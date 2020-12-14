@@ -59,12 +59,18 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     print("smoothed the density field")
     del density_ic
 
-    # delta smooth and delta squared
+    # delta smooth
     d_smooth = d_smooth_four.paint(mode='real')
     FieldMesh(d_smooth).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
-    FieldMesh(d_smooth**2).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
-    print("saved delta and delta_sq")
+    d_smooth_sq = d_smooth**2
+    print("saved delta")
     del d_smooth
+
+    # delta squared
+    d_smooth_sq -= np.mean(d_smooth_sq)
+    FieldMesh(d_smooth_sq).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    print("saved delta_sq")
+    del d_smooth_sq
 
     # nabla squared
     nabla_sq = (d_smooth_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
@@ -169,7 +175,7 @@ def get_fields(dens_dir,R_smooth,N_dim,Lbox):
     # delta smooth and delta squared
     d_smooth = np.real(np.fft.ifftn(d_smooth_four))    
     np.save(dens_dir+"delta_%d.npy"%(int(R_smooth)),d_smooth)
-    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),d_smooth**2)
+    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),d_smooth**2-d_smooth**2.mean())
     del d_smooth
 
     # nabla squared
