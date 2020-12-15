@@ -32,10 +32,9 @@ def CompensateTSC(w, v):
         tmp = (np.sinc(0.5 * wi / np.pi) ) ** 3
         v = v / tmp
         return v
-#TESTING
-#def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
-def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None,key=None):
 
+def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None,key=None):
+    print("off to key ",key)
     # create catalog from fitsfile
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
 
@@ -44,9 +43,9 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None,key=None):
     fpos = cat['Position'].compute()
     wts = cat['Value'].compute()
     play = pm.decompose(fpos)
-    if key == 'delta_sq':
+    if key is not None:#== 'delta_sq':
         wts -= np.mean(wts) # TESTING
-    print(wts.min(),wts.max(),np.mean(wts))
+    #print(key,wts.min(),wts.max(),np.mean(wts))
     mesh = pm.paint(fpos, mass=wts, layout=play)
     '''
     # og

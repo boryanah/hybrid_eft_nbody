@@ -26,7 +26,10 @@ def load_dict(z_nbody,sim_name,machine):
         elif machine == 'NERSC':
             sim_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
             data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-            dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/"
+            if 'ph000' in sim_name:
+                dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/AbacusSummit_hugebase_c000_ph000/"
+            else:
+                dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/"
             print("for any box that is phase 000 can use the hugebase field files")
 
         cat_dir = os.path.join(sim_dir,"z%.3f"%z_nbody)
@@ -92,7 +95,7 @@ def load_dict(z_nbody,sim_name,machine):
                   'sigma8': sigma8}
     
     # simulation
-    user_dict = {'dk': np.pi/Lbox,
+    user_dict = {'dk': 2.*np.pi/Lbox,
                  'ppd': ppd,
                  'z_ic': z_ic,
                  'Lbox': Lbox,

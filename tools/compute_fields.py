@@ -175,7 +175,7 @@ def get_fields(dens_dir,R_smooth,N_dim,Lbox):
     # delta smooth and delta squared
     d_smooth = np.real(np.fft.ifftn(d_smooth_four))    
     np.save(dens_dir+"delta_%d.npy"%(int(R_smooth)),d_smooth)
-    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),d_smooth**2-d_smooth**2.mean())
+    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),d_smooth**2-np.mean(d_smooth**2))
     del d_smooth
 
     # nabla squared
