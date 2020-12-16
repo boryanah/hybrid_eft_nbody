@@ -14,7 +14,7 @@ from pmesh.pm import ParticleMesh
 def filter_txx(k, v):
     kk = sum(ki ** 2 for ki in k) 
     kk[kk == 0] = 1
-    return v*k[0]*k[0]/kk
+    return v*(k[0]*k[0]/kk - 1/3.)
 
 def filter_txy(k, v):
     kk = sum(ki ** 2 for ki in k) 
@@ -34,12 +34,12 @@ def filter_tyz(k, v):
 def filter_tyy(k, v):
     kk = sum(ki ** 2 for ki in k) 
     kk[kk == 0] = 1
-    return v*k[1]*k[1]/kk
+    return v*(k[1]*k[1]/kk - 1./3)
 
 def filter_tzz(k, v):
     kk = sum(ki ** 2 for ki in k) 
     kk[kk == 0] = 1
-    return v*k[2]*k[2]/kk 
+    return v*(k[2]*k[2]/kk - 1./3)
 
 def filter_nabla(k, v):
     kk = sum(ki ** 2 for ki in k) 
@@ -82,20 +82,19 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     del delta_sq
 
     # nabla squared
-    '''
     nabla_sq = (delta_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= nabla_sq.cmean()
     FieldMesh(nabla_sq).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved nabla_sq")
     del nabla_sq
     
-    # minus nabla squared
     '''
+    # minus nabla squared
     nabla_sq = (delta_four.apply(filter_mnabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= np.mean(nabla_sq)
     FieldMesh(nabla_sq).save(dens_dir+"mnabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     del nabla_sq
-    
+    '''
     
     # tidal tensor squared
     s_sq = (delta_four.apply(filter_txx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
