@@ -23,9 +23,6 @@ class NPYFile(FileType):
         """
         return self._data[start:stop:step]
 
-#NPYCatalog = FileCatalogFactory('NPYCatalog', NPYFile)
-#cat = NPYCatalog(pos_parts_fns)
-
 def CompensateTSC(w, v):
     for i in range(3):
         wi = w[i]
@@ -33,20 +30,22 @@ def CompensateTSC(w, v):
         v = v / tmp
         return v
 
-def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None,key=None):
-    print("off to key ",key)
+def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
     # create catalog from fitsfile
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
 
+    
     # TESTING
     pm = ParticleMesh(BoxSize=Lbox, Nmesh=[N_dim,N_dim,N_dim], dtype='f8')
     fpos = cat['Position'].compute()
     wts = cat['Value'].compute()
     play = pm.decompose(fpos)
-    if key is not None:#== 'delta_sq':
-        wts -= np.mean(wts) # TESTING
-    #print(key,wts.min(),wts.max(),np.mean(wts))
+    #if key is not None:
+    #wts -= np.mean(wts) # TESTING
+    if pm.comm.rank == 0:
+        print(wts.min(),wts.max(),np.mean(wts))
     mesh = pm.paint(fpos, mass=wts, layout=play)
+
     '''
     # og
     if m_thr is not None:
@@ -54,7 +53,7 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None,key=None):
         choice = mass > m_thr
         cat = cat[choice]
         print("masked")
-
+    
     mesh = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
     compensation = CompensateTSC # mesh.CompensateTSC not working
     mesh = mesh.apply(compensation, kind='circular', mode='complex')

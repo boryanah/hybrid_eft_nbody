@@ -40,16 +40,16 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
 def main():
     # redshift choice
     zs = [1., 0.7, 0.3, 0.]
-    z_nbody = zs[3]
+    z_nbody = zs[0]
 
-    z_nbody = 1.1
+    #z_nbody = 1.1
     
-    #machine = 'alan'
-    machine = 'NERSC'
+    machine = 'alan'
+    #machine = 'NERSC'
 
-    want_chunk = True
-    sim_name = "AbacusSummit_hugebase_c000_ph000"
-    #sim_name = 'Sim256'
+    want_chunk = False
+    #sim_name = "AbacusSummit_hugebase_c000_ph000"
+    sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
     user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -64,6 +64,7 @@ def main():
     Lbox = user_dict['Lbox']
     
     # names of the 5 fields tuks
+    # TESTING
     field_names = ['delta', 'delta_sq', 'nabla_sq', 's_sq']
     factors = {'delta': 1, 'delta_sq': 2, 'nabla_sq': 1, 's_sq': 2}
     
@@ -78,12 +79,12 @@ def main():
     if want_chunk:
         fields = {}
         for i in range(len(field_names)):
-            fields[field_names[i]], start_pos, end_pos = load_field_chunk_bigfile(field_names[i], dens_dir, R_smooth, rank, n_chunks, Lbox)
+            fields[field_names[i]], start_pos, end_pos = load_field_chunk_bigfile(field_names[i], dens_dir, R_smooth, N_dim, rank, n_chunks, Lbox)
         print("loaded chunkwise fields")
     else:
         fields = {}
         for i in range(len(field_names)):
-            fields[field_names[i]] = load_field_bigfile(field_names[i], dens_dir, R_smooth)
+            fields[field_names[i]] = load_field_bigfile(field_names[i], dens_dir, R_smooth, N_dim)
         print("loaded fields")    
     
     # create directory if it does not exist

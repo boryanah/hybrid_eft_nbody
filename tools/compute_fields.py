@@ -9,6 +9,8 @@ import bigfile
 from nbodykit.filters import Gaussian 
 from nbodykit.lab import *
 
+from pmesh.pm import ParticleMesh                                    
+
 def filter_txx(k, v):
     kk = sum(ki ** 2 for ki in k) 
     kk[kk == 0] = 1
@@ -52,63 +54,79 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
     # load the density field
     density_ic = BigFileMesh(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
     print("loaded the density field")
-    
-    # get smoothed density in fourier space
-    filter_gauss = Gaussian(R_smooth)
-    d_smooth_four = density_ic.apply(filter_gauss, mode='complex', kind='wavenumber')
-    print("smoothed the density field")
-    del density_ic
 
-    # delta smooth
-    d_smooth = d_smooth_four.paint(mode='real')
-    FieldMesh(d_smooth).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
-    d_smooth_sq = d_smooth**2
+    if int(R_smooth) != 0:
+        # get smoothed density in fourier space
+        filter_gauss = Gaussian(R_smooth)
+        delta_four = density_ic.apply(filter_gauss, mode='complex', kind='wavenumber')
+        print("smoothed the density field")
+        del density_ic
+        
+        # delta smooth
+        delta = delta_four.paint(mode='real')
+        delta -= delta.cmean()
+        FieldMesh(delta).save(dens_dir+"delta_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    else:
+        # unsmoothed density field
+        delta_four = FieldMesh(density_ic.paint(mode='complex'))
+        delta = density_ic.paint(mode='real')
+        del density_ic
+    delta_sq = delta**2
     print("saved delta")
-    del d_smooth
+    del delta
 
     # delta squared
-    d_smooth_sq -= np.mean(d_smooth_sq)
-    FieldMesh(d_smooth_sq).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
+    delta_sq -= delta_sq.cmean()
+    FieldMesh(delta_sq).save(dens_dir+"delta_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved delta_sq")
-    del d_smooth_sq
+    del delta_sq
 
     # nabla squared
-    nabla_sq = (d_smooth_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
-    nabla_sq -= np.mean(nabla_sq)
+    '''
+    nabla_sq = (delta_four.apply(filter_nabla, mode='complex', kind='wavenumber')).paint(mode='real')
+    nabla_sq -= nabla_sq.cmean()
     FieldMesh(nabla_sq).save(dens_dir+"nabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved nabla_sq")
     del nabla_sq
-
+    
     # minus nabla squared
     '''
-    nabla_sq = (d_smooth_four.apply(filter_mnabla, mode='complex', kind='wavenumber')).paint(mode='real')
+    nabla_sq = (delta_four.apply(filter_mnabla, mode='complex', kind='wavenumber')).paint(mode='real')
     nabla_sq -= np.mean(nabla_sq)
     FieldMesh(nabla_sq).save(dens_dir+"mnabla_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     del nabla_sq
-    '''
+    
     
     # tidal tensor squared
-    s_sq = (d_smooth_four.apply(filter_txx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
-           (d_smooth_four.apply(filter_tyy, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
-           (d_smooth_four.apply(filter_tzz, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
-           2.*(d_smooth_four.apply(filter_txy, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
-           2.*(d_smooth_four.apply(filter_tzx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
-           2.*(d_smooth_four.apply(filter_tyz, mode='complex', kind='wavenumber')).paint(mode='real')**2
-    del d_smooth_four
-    s_sq -= np.mean(s_sq)
+    s_sq = (delta_four.apply(filter_txx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
+           (delta_four.apply(filter_tyy, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
+           (delta_four.apply(filter_tzz, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
+           2.*(delta_four.apply(filter_txy, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
+           2.*(delta_four.apply(filter_tzx, mode='complex', kind='wavenumber')).paint(mode='real')**2+\
+           2.*(delta_four.apply(filter_tyz, mode='complex', kind='wavenumber')).paint(mode='real')**2
+    del delta_four
+    s_sq -= s_sq.cmean()
     FieldMesh(s_sq).save(dens_dir+"s_sq_%d.bigfile"%int(R_smooth), mode='real', dataset='Field')
     print("saved s_sq")
     del s_sq
 
-def load_field_bigfile(field_name,dens_dir,R_smooth):
-    mesh = BigFileMesh(dens_dir+field_name+"_%d.bigfile"%R_smooth, mode='real', dataset='Field')
+def load_field_bigfile(field_name,dens_dir,R_smooth,N_dim):
+    # if not smoothing
+    if field_name == 'delta' and int(R_smooth) == 0:
+        mesh = BigFileMesh(dens_dir+"density_%d.bigfile"%N_dim, mode='real', dataset='Field')
+    else:
+        mesh = BigFileMesh(dens_dir+field_name+"_%d.bigfile"%R_smooth, mode='real', dataset='Field')
     return mesh.paint(mode='real')
 
 
-def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, i_chunk, n_chunks, Lbox, padding=30.):
-    data = bigfile.File(dens_dir+field_name+"_%d.bigfile"%R_smooth)['Field']
-    n_gr = int(np.round(data.size**(1./3)))
-
+def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, n_gr, i_chunk, n_chunks, Lbox, padding=30.):
+    # if not smoothing
+    if field_name == 'delta' and int(R_smooth) == 0:
+        data = bigfile.File(dens_dir+"density_%d.bigfile"%n_gr)['Field']
+    else:
+        data = bigfile.File(dens_dir+field_name+"_%d.bigfile"%R_smooth)['Field']
+    assert n_gr == int(np.round(data.size**(1./3))), "Data is incompatible with the input"
+    
     grid_size = Lbox/n_gr
     chunk_size = Lbox/n_chunks
     assert grid_size < chunk_size, "The chunk size must be larger than the cell size"
@@ -169,33 +187,33 @@ def get_fields(dens_dir,R_smooth,N_dim,Lbox):
     density_ic = np.load(dens_dir+"density.npy")
 
     # get smoothed density in fourier space
-    karr, ksq, d_smooth_four = get_fourier_smooth(density_ic,R_smooth,N_dim,Lbox)
+    karr, ksq, delta_four = get_fourier_smooth(density_ic,R_smooth,N_dim,Lbox)
     del density_ic
 
     # delta smooth and delta squared
-    d_smooth = np.real(np.fft.ifftn(d_smooth_four))    
-    np.save(dens_dir+"delta_%d.npy"%(int(R_smooth)),d_smooth)
-    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),d_smooth**2-np.mean(d_smooth**2))
-    del d_smooth
+    delta = np.real(np.fft.ifftn(delta_four))    
+    np.save(dens_dir+"delta_%d.npy"%(int(R_smooth)),delta)
+    np.save(dens_dir+"delta_sq_%d.npy"%(int(R_smooth)),delta**2-np.mean(delta**2))
+    del delta
 
     # nabla squared
-    nabla_sq = np.real(np.fft.ifftn(ksq*d_smooth_four))
+    nabla_sq = np.real(np.fft.ifftn(ksq*delta_four))
     nabla_sq -= np.mean(nabla_sq)
     np.save(dens_dir+"nabla_sq_%d.npy"%(int(R_smooth)),nabla_sq)
     del nabla_sq
 
     # tidal tensor squared
     ksq[0,0,0] = 1.
-    s_sq = np.real(np.fft.ifftn(karr[:,None,None]*karr[:,None,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[:,None,None]*karr[None,:,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[:,None,None]*karr[None,None,:]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,:,None]*karr[:,None,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,:,None]*karr[None,:,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,:,None]*karr[None,None,:]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,None,:]*karr[:,None,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,None,:]*karr[None,:,None]*d_smooth_four/ksq))**2+\
-           np.real(np.fft.ifftn(karr[None,None,:]*karr[None,None,:]*d_smooth_four/ksq))**2
-    del d_smooth_four
+    s_sq = np.real(np.fft.ifftn(karr[:,None,None]*karr[:,None,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[:,None,None]*karr[None,:,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[:,None,None]*karr[None,None,:]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,:,None]*karr[:,None,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,:,None]*karr[None,:,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,:,None]*karr[None,None,:]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,None,:]*karr[:,None,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,None,:]*karr[None,:,None]*delta_four/ksq))**2+\
+           np.real(np.fft.ifftn(karr[None,None,:]*karr[None,None,:]*delta_four/ksq))**2
+    del delta_four
     s_sq -= np.mean(s_sq)
     np.save(dens_dir+"s_sq_%d.npy"%(int(R_smooth)),s_sq)
     del s_sq

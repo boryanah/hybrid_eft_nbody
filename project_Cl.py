@@ -7,6 +7,7 @@ import pyccl as ccl
 
 from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
+from scipy.interpolate import interp1d
 
 # user choices
 fit_type = 'power_hh'
@@ -15,7 +16,7 @@ fit_type = 'power_hh'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
 k_max = 0.3
-k_min = 1.e-5
+k_min = 1.e-4
 fit_shotnoise = False
 
 # redshift choice
@@ -72,12 +73,19 @@ for i in range(len(sf)):
     #Pk_mm = Pk_mm[k_cut]
     #Pk_hm = Pk_hm[k_cut]
     ks = ks[k_cut]
+    ks[0] = 1.e-4
+    
+    Pk_fun = interp1d(ks,Pk_hh)
 
-    log_pk = np.log(Pk_hh)
+    k_interp = np.logspace(-4,np.log10(ks[-1]))
+    
+    log_pk = np.log(Pk_fun(k_interp))
+    #log_pk = np.log(Pk_hh)
     try:
         lpk_array = np.vstack((lpk_array,log_pk))
     except:
         lpk_array = log_pk
+
 
 # testing
 #z = np.linspace(0,1.2,1024)
