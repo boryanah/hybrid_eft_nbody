@@ -70,6 +70,7 @@ def get_fields_bigfile(dens_dir,R_smooth,N_dim,Lbox):
         # unsmoothed density field
         delta_four = FieldMesh(density_ic.paint(mode='complex'))
         delta = density_ic.paint(mode='real')
+        delta -= delta.cmean()
         del density_ic
     delta_sq = delta**2
     print("saved delta")

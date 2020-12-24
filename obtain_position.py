@@ -39,17 +39,19 @@ def save_pos(pos,type_pos,data_dir,value=None,mass=None):
 
 def main():
     # redshift choice
-    zs = [1., 0.7, 0.3, 0.]
-    z_nbody = zs[0]
+    #zs = [1., 0.7, 0.3, 0.]
+    #z_nbody = zs[0]
 
-    #z_nbody = 1.1
+    z_nbody = 1.1
+    #z_nbody = 0.8
     
-    machine = 'alan'
-    #machine = 'NERSC'
+    #machine = 'alan'
+    machine = 'NERSC'
 
-    want_chunk = False
+    want_chunk = True
     #sim_name = "AbacusSummit_hugebase_c000_ph000"
-    sim_name = 'Sim256'
+    sim_name = "AbacusSummit_base_c000_ph000"
+    #sim_name = 'Sim256'
     #sim_name = 'Sim1024'
     
     user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -73,8 +75,9 @@ def main():
 
     # factor to scale the density as suggested in Modi et al.
     D_z_nbody = ccl.growth_factor(cosmo,1./(1+z_nbody))
-    D_z_ic = ccl.growth_factor(cosmo,1./(1+z_nbody))
+    D_z_ic = ccl.growth_factor(cosmo,1./(1+z_ic))
     D_growth = D_z_nbody/D_z_ic
+    
 
     if want_chunk:
         fields = {}

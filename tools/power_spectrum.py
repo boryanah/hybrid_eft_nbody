@@ -28,13 +28,13 @@ def CompensateTSC(w, v):
         wi = w[i]
         tmp = (np.sinc(0.5 * wi / np.pi) ) ** 3
         v = v / tmp
-        return v
+    return v
 
 def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
     # create catalog from fitsfile
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
 
-    
+    '''
     # TESTING
     pm = ParticleMesh(BoxSize=Lbox, Nmesh=[N_dim,N_dim,N_dim], dtype='f8')
     fpos = cat['Position'].compute()
@@ -45,7 +45,6 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
     if pm.comm.rank == 0:
         print(wts.min(),wts.max(),np.mean(wts))
     mesh = pm.paint(fpos, mass=wts, layout=play)
-
     '''
     # og
     if m_thr is not None:
@@ -57,7 +56,7 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
     mesh = cat.to_mesh(window='tsc',Nmesh=N_dim,BoxSize=Lbox,interlaced=interlaced,compensated=False)
     compensation = CompensateTSC # mesh.CompensateTSC not working
     mesh = mesh.apply(compensation, kind='circular', mode='complex')
-    '''
+    
 
     return mesh
 
