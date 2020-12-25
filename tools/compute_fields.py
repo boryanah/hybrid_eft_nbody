@@ -119,7 +119,7 @@ def load_field_bigfile(field_name,dens_dir,R_smooth,N_dim):
     return mesh.paint(mode='real')
 
 
-def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, n_gr, i_chunk, n_chunks, Lbox, padding=30.):
+def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, n_gr, i_chunk, n_chunks, Lbox, padding=40.):
     # if not smoothing
     if field_name == 'delta' and int(R_smooth) == 0:
         data = bigfile.File(dens_dir+"density_%d.bigfile"%n_gr)['Field']
@@ -142,7 +142,6 @@ def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, n_gr, i_chunk, n_ch
     start = (i1*grid_size)%Lbox
     end = ((i2+1)*grid_size)%Lbox
     # convert to indices in bigfile
-    print("i_chunk, gr depth, n_gr, i1, i2, start, end = %d %.3f %d %d %d %.3f %.3f"%(i_chunk, gr_depth, n_gr, i1, i2, start, end))
     i1 *= n_gr**2
     i2 *= n_gr**2
     if i1 > i2:
@@ -151,16 +150,12 @@ def load_field_chunk_bigfile(field_name, dens_dir, R_smooth, n_gr, i_chunk, n_ch
 
         n = len(data1)+len(data2)
         field_chunk = np.zeros(n,dtype=np.float32)
-
-        print("subverted i1 i2 n", i1, i2, n)
         
         field_chunk[:len(data1)] = data1
         field_chunk[len(data1):] = data2
         del data1, data2
-        # this
         field_chunk = field_chunk.reshape((gr_depth,n_gr,n_gr))
     else:
-        print("normal i1 i2", i1, i2)
         field_chunk = data[i1:i2].reshape((gr_depth,n_gr,n_gr))
     
     return field_chunk, start, end
