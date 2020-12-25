@@ -15,19 +15,32 @@ fit_type = 'power_hh'
 #fit_type = 'power_hm'
 #fit_type = 'ratio'
 #fit_type = 'ratio_both'
-k_max = 0.3
+k_max = 0.5
 k_min = 1.e-4
 fit_shotnoise = False
 
 # redshift choice
 #z_nbody = 1.1
-zs = np.array([0.,0.3,0.7,1.])
-sf = 1./(1+zs)
-z_nbody = zs[0]
+#zs = np.array([0.,0.3,0.7,1.])
+# TESTING CLASS
+class_dir = "/home/boryanah/repos/AbacusSummit/Cosmologies/abacus_cosm000/"
+#zs = np.array([3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
+#zs = np.array([0.8, 0.5, 0.4, 0.3])[::-1]
+#zs = np.array([1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
+zs = np.array([1.1, 0.8, 0.5, 0.1])[::-1]
+#zs = np.array([1.4, 1.1, 0.8, 0.5])[::-1]
+a_s = 1./(1+zs)
+# TESTING CLASS
+z_nbody = 1.
+# og
+#z_nbody = zs[0]
 
+# name of the machine
 machine = 'alan'
 #machine = 'NERSC'
 
+# simulation name
+#sim_name = "AbacusSummit_hugebase_c000_ph000"
 #sim_name = "AbacusSummit_hugebase_c000_ph000"
 sim_name = "Sim256"
 
@@ -43,44 +56,59 @@ cosmo = ccl.Cosmology(**cosmo_dict)
 nzs = np.exp(-((zs-0.5)/0.05)**2/2)
 
 # Bias
-bzs = 0.95/ccl.growth_factor(cosmo,sf)
+bzs = 0.95/ccl.growth_factor(cosmo,a_s)
 
 # This tracer will only include the density contribution
 halos = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(zs,nzs), bias=(zs,bzs), mag_bias=None)
 
-
-sf = sf[::-1]
+# change the order cause that's what CCL prefers
+a_s = a_s[::-1]
 bzs = bzs[::-1]
 
-for i in range(len(sf)):
+for i in range(len(a_s)):
     # which halo files are we loading
     z = zs[i]
-    a = sf[i]
+    a = a_s[i]
 
     # data directory
-    data_dir = data_dir.replace('z1.000','z%.3f'%z)
+    # TESTING CLASS og is uncommented
+    #data_dir = data_dir.replace('z1.000','z%.3f'%z)
 
     # load power spectra
-    Pk_hh = np.load(data_dir+"Pk_hh.npy")
+    ks = np.load(data_dir+"ks.npy")
+    # TESTING CLASS
+    ks = ks[~np.isnan(ks)]
+    print(data_dir)
+    #Pk_hh = np.load(data_dir+"Pk_hh.npy")
     #Pk_mm = np.load(data_dir+"Pk_mm.npy")
     #Pk_hm = np.load(data_dir+"Pk_hm.npy")
-    ks = np.load(data_dir+"ks.npy")
-    N_modes = len(ks)
-
+        
     # apply cuts to the data
     k_cut = (ks < k_max) & (ks >= k_min)
-    Pk_hh = Pk_hh[k_cut]
+    # TESTING CLASS
+    #Pk_hh = Pk_hh[k_cut]
     #Pk_mm = Pk_mm[k_cut]
     #Pk_hm = Pk_hm[k_cut]
     ks = ks[k_cut]
-    ks[0] = 1.e-4
-    
-    Pk_fun = interp1d(ks,Pk_hh)
+    #ks[0] = k_min # without this line things go exponential
+    print(ks[0])
 
-    k_interp = np.logspace(-4,np.log10(ks[-1]))
+    # TESTING CLASS
+    print("abacus_cosm000.z%d_pk.dat"%(i+1),z)
+    klin, Pklin = np.loadtxt(class_dir+"abacus_cosm000.z%d_pk.dat"%(i+1),unpack=True)
+    print(klin.min(),klin.max(),ks.min(),ks.max())
+    Pk_fun = interp1d(klin,Pklin)
+    # TESTING helps next line helps to make things match
+    ks = klin
+    Pk_hh = bzs[i]**2*Pk_fun(ks)
     
+    # interpolate
+    k_interp = np.logspace(np.log10(ks[0]),np.log10(ks[-1]),1000)
+    Pk_fun = interp1d(ks,Pk_hh)
     log_pk = np.log(Pk_fun(k_interp))
     #log_pk = np.log(Pk_hh)
+    
+    # assemble things
     try:
         lpk_array = np.vstack((lpk_array,log_pk))
     except:
@@ -89,15 +117,15 @@ for i in range(len(sf)):
 
 # testing
 #z = np.linspace(0,1.2,1024)
-#sf = 1./(1+z)
-#sf = sf[::-1]
+#a_s = 1./(1+z)
+#a_s = a_s[::-1]
 #ks = np.logspace(-5,2,512)
 
 # simple power spectrum for testing
-lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in sf]))
+lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in a_s]))
 
 # Create a Pk2D object
-pk_tmp = ccl.Pk2D(a_arr=sf, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
+pk_tmp = ccl.Pk2D(a_arr=a_s, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
 
 # wave numbers
 ells = np.geomspace(2,1000,20)
@@ -115,10 +143,12 @@ plt.xlabel('$\\ell$', fontsize=14)
 plt.ylabel('$10^4\\times C_\\ell$', fontsize=14)
 plt.legend(loc='upper right', fontsize=12, frameon=False)
 plt.savefig("figs/Cls.png")
+#plt.ylim([0,0.03])
 plt.show()
 
 quit()
 
+N_modes = len(ks)
 print("err/true = ",np.sqrt(2./N_modes))
 # load errorbars for plotting
 #Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
