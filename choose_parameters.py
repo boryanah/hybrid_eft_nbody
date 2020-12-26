@@ -1,14 +1,15 @@
-import numpy as np
 import os
 import glob
+
+import numpy as np
 import asdf
 
 def load_dict(z_nbody,sim_name,machine):
     # user choices
-    #R_smooth = 2.
-    #R_smooth = 1. # TESTING
-    R_smooth = 0 # TESTING
     #R_smooth = 4.
+    #R_smooth = 2.
+    #R_smooth = 1.
+    R_smooth = 0 
     interlaced = True
     m_threshold = 1.e13
     
@@ -27,7 +28,7 @@ def load_dict(z_nbody,sim_name,machine):
         elif machine == 'NERSC':
             sim_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
             data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
-            if 'ph000' in sim_name:
+            if 'c000_ph000' in sim_name:
                 dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/AbacusSummit_hugebase_c000_ph000/"
             else:
                 dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/"
@@ -42,8 +43,7 @@ def load_dict(z_nbody,sim_name,machine):
         Lbox = header['BoxSize']
         ppd = header['ppd']
         m_part = header['ParticleMassHMsun']
-        #N_dim = 1152
-        N_dim = 2304 # TESTING
+        N_dim = 2304
         z_ic = 99
         
         # cosmology
