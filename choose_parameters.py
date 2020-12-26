@@ -6,7 +6,8 @@ import asdf
 def load_dict(z_nbody,sim_name,machine):
     # user choices
     #R_smooth = 2.
-    R_smooth = 1. # TESTING
+    #R_smooth = 1. # TESTING
+    R_smooth = 0 # TESTING
     #R_smooth = 4.
     interlaced = True
     m_threshold = 1.e13

@@ -9,10 +9,9 @@ def read_abacus(sim_name,z_nbody,i_chunk):
     chunk_fn = os.path.join(z_dir,'halo_info','halo_info_%03d.asdf'%i_chunk)
     
     # load halo catalog and 10% particle subsample
-    try:
-        cat = CompaSOHaloCatalog(chunk_fn, load_subsamples='AB_all', fields=['x_L2com','N'], unpack_bits = True)
-    except:
-        cat = CompaSOHaloCatalog(chunk_fn, load_subsamples='A_all', fields=['x_L2com','N'], unpack_bits = True)
+    #cat = CompaSOHaloCatalog(chunk_fn, load_subsamples='AB_all', fields=['x_L2com','N'], unpack_bits = True)
+    # load halo catalog and 3% particle subsample
+    cat = CompaSOHaloCatalog(chunk_fn, load_subsamples='A_all', fields=['x_L2com','N'], unpack_bits = True)
 
     # load the pid, position and lagrangian positions
     #pid = cat.subsamples['pid']

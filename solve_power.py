@@ -1,7 +1,19 @@
-import numpy as np
-import os
-from scipy.optimize import minimize
+#!/usr/bin/env python3
+'''
+This is a script for solving analytically for the 5 bias parameters.
+
+Usage: 
+------ 
+./solve_power.py --sim_name AbacusSummit_base_c000_ph000
+
+'''
+
 import glob
+import os
+
+import numpy as np
+import argparse
+from scipy.optimize import minimize
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -9,39 +21,15 @@ import matplotlib.pyplot as plt
 from tools.power_spectrum import predict_Pk, predict_Pk_cross
 from choose_parameters import load_dict
 
-# user choices
-fit_type = 'power_hh'
-#fit_type = 'power_both'
-#fit_type = 'power_hm'
-#fit_type = 'ratio'
-#fit_type = 'ratio_both'
-k_max = 0.5
-k_min = 0.
-fit_shotnoise = False
-fix_F0 = False#True#False
-
-# redshift choice
-#z_nbody = 1.1
-zs = [1.,0.7,0.3,0.]
-z_nbody = zs[0]
-
-
-machine = 'alan'
-#machine = 'NERSC'
-
-#sim_name = "AbacusSummit_hugebase_c000_ph000"
-sim_name = "Sim256"
-
-# load parameters
-user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
-R_smooth = user_dict['R_smooth']
-data_dir = user_dict['data_dir']
-
-# which halo files are we loading
-sim_name_halo = "AbacusSummit_hugebase_c000_ph001"
-sim_name_halo = "AbacusSummit_hugebase_c000_ph000"
-sim_name_halo = "Sim256"
-halo_dir = data_dir.replace(sim_name,sim_name_halo)
+DEFAULTS = {}
+#DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph000"
+DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
+DEFAULTS['sim_name_halo'] = DEFAULTS['sim_name']
+DEFAULTS['z_nbody'] = 1.1
+DEFAULTS['z_ic'] = 99.
+DEFAULTS['R_smooth'] = 0.
+DEFAULTS['machine'] = 'NERSC'
+DEFAULTS['fit_type'] = 'power_hh' #'power_hm' #'power_both'
 
 
 def solve(Pk_hh_true, Pk_hm_true, cov, F_ini, k_length, tol, max_iter, fit_type, fix_f0):
@@ -59,9 +47,8 @@ def solve(Pk_hh_true, Pk_hm_true, cov, F_ini, k_length, tol, max_iter, fit_type,
             P_sh = Pk_sh - f_shot*Pk_const
             P_hh = P_hh_true - Pk_sh
 
-        # TESTING
+        # subtract guess from the truth
         P_hm = Pk_hm_true - np.dot(F.T,Pk_ij[0,:,:]).flatten()
-        #print(P_hat[:,0],np.dot(F.T,Pk_ij[0,:,:]).flatten())
         
         if fit_type == 'power_hh':
             P_h = P_hh
@@ -147,153 +134,167 @@ def get_P(F_this,k_length,fix_f0):
         if fix_f0:
             # correct the indexing
             if i == 0: continue
-            P_hat[:,i-1] = 2.*P_hat_i# TESTING
+            P_hat[:,i-1] = 2.*P_hat_i
         else:
-            P_hat[:,i] = 2.*P_hat_i # TESTING
+            P_hat[:,i] = 2.*P_hat_i 
             
     return P_guess, P_hat 
 
-# load power spectra
-#Pk_hh = np.load(data_dir+"Pk_hh.npy")
-Pk_hh = np.load(halo_dir+"Pk_hh.npy")
-Pk_mm = np.load(data_dir+"Pk_mm.npy")
-Pk_hm = np.load(data_dir+"Pk_hm.npy")
-ks = np.load(data_dir+"ks.npy")
-N_modes = len(ks)
+def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, fit_shotnoise=False):
 
-# apply cuts to the data
-k_cut = (ks < k_max) & (ks >= k_min)
-Pk_hh = Pk_hh[k_cut]
-Pk_mm = Pk_mm[k_cut]
-Pk_hm = Pk_hm[k_cut]
-ks = ks[k_cut]
+    # power spectrum choices
+    k_max = 0.5
+    k_min = 0.
+    
+    # load parameters
+    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
+    R_smooth = user_dict['R_smooth']
+    data_dir = user_dict['data_dir']
 
-print("err/true = ",np.sqrt(2./N_modes))
-# load errorbars for plotting
-#Pk_hh_err = np.load(data_dir+"Pk_hh_err.npy")
-Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
-#Pk_hh_err[ks < 0.01] = 0.01*Pk_hh[ks < 0.01]
-#Pk_hh_err = Pk_hh_err[k_cut]
-Pk_hm_err = np.sqrt((Pk_hm**2+Pk_hh*Pk_mm)/N_modes)
-#Pk_hm_err[ks < 0.01] = 0.01*Pk_hm[ks < 0.01]
-#np.load(data_dir+"Pk_hm_err.npy")
-#Pk_hm_err = Pk_hm_err[k_cut]
+    # which halo files are we loading
+    halo_dir = data_dir.replace(sim_name,sim_name_halo)
 
-# combine the ratios
-# TODO has to be done properly with jackknifing
-Pk_hh_err[0] = 1.e-6    
-cov_hh = np.diag(Pk_hh_err)
+    # load power spectra
+    Pk_hh = np.load(halo_dir+"Pk_hh.npy")
+    Pk_mm = np.load(halo_dir+"Pk_mm.npy")
+    Pk_hm = np.load(halo_dir+"Pk_hm.npy")
+    ks = np.load(halo_dir+"ks.npy")
+    N_modes = len(ks)
 
-Pk_both = np.hstack((Pk_hh,Pk_hm))
-Pk_both_err = np.hstack((Pk_hh_err,Pk_hm_err))
-Pk_both_err[len(Pk_hh)] = 1.e-6
-cov_both = np.diag(Pk_both_err)
+    # apply cuts to the data
+    k_cut = (ks < k_max) & (ks >= k_min)
+    Pk_hh = Pk_hh[k_cut]
+    Pk_mm = Pk_mm[k_cut]
+    Pk_hm = Pk_hm[k_cut]
+    ks = ks[k_cut]
 
-Pk_hm_err[0] = 1.e-6
-cov_hm = np.diag(Pk_hm_err)
+    print("err/true = ",np.sqrt(2./N_modes))
+    # load errorbars for plotting
+    Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
+    Pk_hm_err = np.sqrt((Pk_hm**2+Pk_hh*Pk_mm)/N_modes)
 
-rat_hh = Pk_hh/Pk_mm
-rat_hh_err = np.ones(len(rat_hh))*1.e-1
-rat_hh_err[0] = 1.e-6
-cov_rat = np.diag(rat_hh_err)
+    # combine the ratios
+    # TODO has to be done properly with jackknifing
+    Pk_hh_err[0] = 1.e-6    
+    cov_hh = np.diag(Pk_hh_err)
 
-rat = np.hstack((Pk_hh/Pk_mm,Pk_hm/Pk_mm))
-rat_err = np.ones(len(rat))*1.e-1
-rat_err[0] = 1.e-6
-rat_err[len(Pk_hh)] = 1.e-6
-cov_rat_both = np.diag(rat_err)
+    Pk_both = np.hstack((Pk_hh,Pk_hm))
+    Pk_both_err = np.hstack((Pk_hh_err,Pk_hm_err))
+    Pk_both_err[len(Pk_hh)] = 1.e-6
+    cov_both = np.diag(Pk_both_err)
 
-# load all 15 templates
-ks_all = np.load(data_dir+"ks_all.npy")
-Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
-k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
+    Pk_hm_err[0] = 1.e-6
+    cov_hm = np.diag(Pk_hm_err)
 
-# linear solution
-Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
-Pk_all = Pk_all[:,k_cut]
-#P_hat = Pk_all.T
+    # load all 15 templates
+    ks_all = np.load(data_dir+"ks_all.npy")
+    Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth)))
+    k_lengths = np.load(data_dir+"k_lengths.npy").astype(int)
+
+    # linear solution
+    Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
+    Pk_all = Pk_all[:,k_cut]
+    #P_hat = Pk_all.T
 
 
-# shot noise params
-#Pk_sh = 1./n_bar # analytical shot noise
-Pk_sh = 0. #  [note that we have already subtracted it from Pk_hh]
-Pk_const = np.ones(len(Pk_hh))
-F_size = 5
+    # shot noise params
+    #Pk_sh = 1./n_bar # analytical shot noise
+    Pk_sh = 0. #  [note that we have already subtracted it from Pk_hh]
+    Pk_const = np.ones(len(Pk_hh))
+    F_size = 5
 
-Pk_ij = np.zeros((F_size,F_size,len(Pk_hh)))
-c = 0
-for i in range(F_size):
-    for j in range(F_size):
-        if i > j: continue
-        Pk_ij[i,j,:] = Pk_all[c]
-        if i != j: Pk_ij[j,i,:] = Pk_all[c]
-        c += 1
-
-
-# solution params
-tol = 1.e-3 # choose tolerance
-F_start = np.ones((F_size,1)) # initial guess
-n_steps = 10
-max_iter = 1000
-
-# first solve varying all 5 parameters
-fix_F0 = True# False
-fit_type = 'power_hh'
-F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F_start, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
-'''
-# next fix F0 and change it slowly until it gets to 1 and a stable solution is found
-fix_F0 = True
-#fit_type = 'power_hh'
-fit_type = 'power_both'
-print(F[0][0])
-step_size = (F[0][0]-1.)/n_steps
-for i in range(n_steps):
-    F[0][0] -= step_size
-    print(F)
-    #F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
-    F, f_shot = solve(Pk_hh, Pk_hm, cov_both, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
-'''
-# compute power spectrum for best-fit
-P_guess, P_hat = get_P(F,len(Pk_hh),fix_F0)
-Pk_hh_best = P_guess
-#Pk_best = Pk_best[k_cut]
-Pk_hm_best = np.dot(F.T,Pk_ij[0,:,:]).flatten()
-#P_hat[:,0]
-#Pk_hm_best = Pk_hm_best[k_cut]
-
-# compute the probability
-delta = Pk_hh_best-Pk_hh
-lnprob = np.einsum('i,ij,j',delta, np.linalg.inv(cov_hh), delta)
-lnprob *= -0.5 
-print("lnprob = ", lnprob)
+    Pk_ij = np.zeros((F_size,F_size,len(Pk_hh)))
+    c = 0
+    for i in range(F_size):
+        for j in range(F_size):
+            if i > j: continue
+            Pk_ij[i,j,:] = Pk_all[c]
+            if i != j: Pk_ij[j,i,:] = Pk_all[c]
+            c += 1
 
 
-# plot fit
-plt.figure(1,figsize=(12,8))
-fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
-for i in range(len(F)):
-    for j in range(len(F)):
-        if i > j: continue
-        label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
-        Pk_tmp = Pk_ij[i,j,:]*F[i]*F[j]
-        plt.plot(ks,Pk_tmp,ls='--',lw=1.,label=label)
+    # solution params
+    tol = 1.e-3 # choose tolerance
+    F_start = np.ones((F_size,1)) # initial guess
+    n_steps = 10
+    max_iter = 1000
 
-plt.errorbar(ks,Pk_hh,yerr=Pk_hh_err,color='black',label='halo-halo',zorder=1)
-plt.plot(ks,Pk_hh_best,color='dodgerblue',label='halo-halo fit',zorder=2)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
-plt.ylabel(r"$P(k)$")
-plt.legend()
-plt.savefig("figs/Pk_hh_fit.pdf")
+    # first solve varying all 5 parameters
+    fix_F0 = True# False
+    fit_type = 'power_hh'
+    F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F_start, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+    '''
+    # next fix F0 and change it slowly until it gets to 1 and a stable solution is found
+    fix_F0 = True
+    #fit_type = 'power_hh'
+    fit_type = 'power_both'
+    print(F[0][0])
+    step_size = (F[0][0]-1.)/n_steps
+    for i in range(n_steps):
+        F[0][0] -= step_size
+        print(F)
+        #F, f_shot = solve(Pk_hh, Pk_hm, cov_hh, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+        F, f_shot = solve(Pk_hh, Pk_hm, cov_both, F, len(Pk_hh), tol, max_iter, fit_type, fix_F0)
+    '''
+    # compute power spectrum for best-fit
+    P_guess, P_hat = get_P(F,len(Pk_hh),fix_F0)
+    Pk_hh_best = P_guess
+    #Pk_best = Pk_best[k_cut]
+    Pk_hm_best = np.dot(F.T,Pk_ij[0,:,:]).flatten()
+    #P_hat[:,0]
+    #Pk_hm_best = Pk_hm_best[k_cut]
 
-plt.figure(2)
-plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter',zorder=1)
-plt.plot(ks,Pk_hm_best,color='dodgerblue',label='halo-matter fit',zorder=2)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
-plt.ylabel(r"$P(k)$")
-plt.legend()
-plt.savefig("figs/Pk_hm_fit.pdf")
-plt.show()
+    # compute the probability
+    delta = Pk_hh_best-Pk_hh
+    lnprob = np.einsum('i,ij,j',delta, np.linalg.inv(cov_hh), delta)
+    lnprob *= -0.5 
+    print("lnprob = ", lnprob)
+
+
+    # plot fit
+    plt.figure(1,figsize=(12,8))
+    fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
+    for i in range(len(F)):
+        for j in range(len(F)):
+            if i > j: continue
+            label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
+            Pk_tmp = Pk_ij[i,j,:]*F[i]*F[j]
+            plt.plot(ks,Pk_tmp,ls='--',lw=1.,label=label)
+
+    plt.errorbar(ks,Pk_hh,yerr=Pk_hh_err,color='black',label='halo-halo',zorder=1)
+    plt.plot(ks,Pk_hh_best,color='dodgerblue',label='halo-halo fit',zorder=2)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
+    plt.ylabel(r"$P(k)$")
+    plt.legend()
+    plt.savefig("figs/Pk_hh_fit.pdf")
+
+    plt.figure(2)
+    plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter',zorder=1)
+    plt.plot(ks,Pk_hm_best,color='dodgerblue',label='halo-matter fit',zorder=2)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")
+    plt.ylabel(r"$P(k)$")
+    plt.legend()
+    plt.savefig("figs/Pk_hm_fit.pdf")
+    plt.show()
+
+
+class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    pass
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
+    parser.add_argument('--sim_name', help='Simulation name for the templates', default=DEFAULTS['sim_name'])
+    parser.add_argument('--sim_name_halo', help='Simulation name for the halo power spectra', default=DEFAULTS['sim_name_halo'])
+    parser.add_argument('--z_nbody', help='N-body redshift', type=float, default=DEFAULTS['z_nbody'])
+    parser.add_argument('--z_ic', help='N-body initial redshift', type=float, default=DEFAULTS['z_ic'])
+    parser.add_argument('--R_smooth', help='Smoothing scale', type=float, default=DEFAULTS['R_smooth'])
+    parser.add_argument('--machine', help='Machine name', default=DEFAULTS['machine'])
+    parser.add_argument('--fit_type', help='Would you like to fit the auto, the cross or both power spectra', default=DEFAULTS['fit_type'])
+    parser.add_argument('--fit_shotnoise', help='Fit for the shot noise (not working I think)', action='store_true'))
+    args = parser.parse_args()
+    args = vars(args)
+    main(**args)

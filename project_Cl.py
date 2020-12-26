@@ -21,19 +21,19 @@ fit_shotnoise = False
 
 # redshift choice
 #z_nbody = 1.1
-#zs = np.array([0.,0.3,0.7,1.])
+#z_s = np.array([0.,0.3,0.7,1.])
 # TESTING CLASS
 class_dir = "/home/boryanah/repos/AbacusSummit/Cosmologies/abacus_cosm000/"
-#zs = np.array([3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
-#zs = np.array([0.8, 0.5, 0.4, 0.3])[::-1]
-#zs = np.array([1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
-zs = np.array([1.1, 0.8, 0.5, 0.1])[::-1]
-#zs = np.array([1.4, 1.1, 0.8, 0.5])[::-1]
-a_s = 1./(1+zs)
+#z_s = np.array([3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
+#z_s = np.array([0.8, 0.5, 0.4, 0.3])[::-1]
+#z_s = np.array([1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])[::-1]
+z_s = np.array([1.1, 0.8, 0.5, 0.1])[::-1]
+#z_s = np.array([1.4, 1.1, 0.8, 0.5])[::-1]
+a_s = 1./(1+z_s)
 # TESTING CLASS
 z_nbody = 1.
 # og
-#z_nbody = zs[0]
+#z_nbody = z_s[0]
 
 # name of the machine
 machine = 'alan'
@@ -53,21 +53,21 @@ data_dir = user_dict['data_dir']
 cosmo = ccl.Cosmology(**cosmo_dict)
 
 # Redshift distributions
-nzs = np.exp(-((zs-0.5)/0.05)**2/2)
+nz_s = np.exp(-((z_s-0.5)/0.05)**2/2)
 
 # Bias
-bzs = 0.95/ccl.growth_factor(cosmo,a_s)
+bz_s = 0.95/ccl.growth_factor(cosmo,a_s)
 
 # This tracer will only include the density contribution
-halos = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(zs,nzs), bias=(zs,bzs), mag_bias=None)
+halos = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(z_s,nz_s), bias=(z_s,bz_s), mag_bias=None)
 
 # change the order cause that's what CCL prefers
 a_s = a_s[::-1]
-bzs = bzs[::-1]
+bz_s = bz_s[::-1]
 
 for i in range(len(a_s)):
     # which halo files are we loading
-    z = zs[i]
+    z = z_s[i]
     a = a_s[i]
 
     # data directory
@@ -100,7 +100,7 @@ for i in range(len(a_s)):
     Pk_fun = interp1d(klin,Pklin)
     # TESTING helps next line helps to make things match
     ks = klin
-    Pk_hh = bzs[i]**2*Pk_fun(ks)
+    Pk_hh = bz_s[i]**2*Pk_fun(ks)
     
     # interpolate
     k_interp = np.logspace(np.log10(ks[0]),np.log10(ks[-1]),1000)
