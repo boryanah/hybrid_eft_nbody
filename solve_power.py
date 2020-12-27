@@ -108,7 +108,6 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
     Pk_mm = np.load("data/AbacusSummit_base_c000_ph000/z1.100/r_smooth_0/Pk_mm.npy")
     Pk_hm = np.load(halo_dir+"Pk_hm.npy")
     ks = np.load(halo_dir+"ks.npy")
-    N_modes = len(ks)
 
     # apply cuts to the data
     k_cut = (ks < k_max) & (ks >= k_min)
@@ -126,17 +125,19 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
     
     # combine the ratios
     # TODO has to be done properly with jackknifing
-    Pk_hh_err[0] = 1.e-6    
-    cov_hh = np.diag(Pk_hh_err)
+    Pk_hh_err[0] = 1.e6 #tuks
+    cov_hh = np.diag(Pk_hh_err**2)
 
     Pk_both = np.hstack((Pk_hh,Pk_hm))
     Pk_both_err = np.hstack((Pk_hh_err,Pk_hm_err))
-    Pk_both_err[len(Pk_hh)] = 1.e-6
-    cov_both = np.diag(Pk_both_err)
+    Pk_both_err[len(Pk_hh)] = 1.e6
+    cov_both = np.diag(Pk_both_err**2)
 
-    Pk_hm_err[0] = 1.e-6
-    cov_hm = np.diag(Pk_hm_err)
+    Pk_hm_err[0] = 1.e6
+    cov_hm = np.diag(Pk_hm_err**2)
 
+
+    
     # load all 15 templates
     ks_all = np.load(data_dir+"ks_all.npy")
     Pk_all = np.load(data_dir+"Pk_all_%d.npy"%(int(R_smooth))) # og
@@ -165,7 +166,7 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
             Pk_tmp = Pk_tmps[r'$('+fields_tmp[i]+','+fields_tmp[j]+r')$']
             Pk_tmp = np.interp(ks,Pk_tmps['ks'],Pk_tmp)
             # original
-            Pk_tmp = Pk_all[c]
+            #Pk_tmp = Pk_all[c]
             
             Pk_ij[i,j,:] = Pk_tmp
             if i != j: Pk_ij[j,i,:] = Pk_tmp
@@ -184,11 +185,13 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
     elif fit_type == 'power_hm':
         icov = np.linalg.inv(cov_hm)
     F = solve(Pk_ij, Pk_hh, Pk_hm, icov, F_start, len(Pk_hh), tol, factor, max_iter, fit_type)
-
+    #F = np.array([1.,-0.8277,-0.0424,-0.339,0.0355])
+    #F = np.array([1, -1.01524924, 0.0075658, 0.0001073, -0.0052661])
+    
     # compute power spectrum for best-fit
     Pk_hh_guess, Pk_hm_guess, P_hat = get_P(Pk_ij, F, len(Pk_hh))
     Pk_hh_best = Pk_hh_guess
-    Pk_hm_best = np.dot(F.T,Pk_ij[0,:,:]).flatten()
+    Pk_hm_best = Pk_hm_guess
 
     # compute the probability
     delta = Pk_hh_best-Pk_hh
@@ -200,7 +203,7 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
     print("Pk_hm_truth = ", Pk_hm[::10])
     print("Pk_hm_best = ", Pk_hm_best[::10])
     
-    # plot fit
+    # plot solution
     plt.figure(1, figsize=(12,8))
     fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
     for i in range(len(F)):
@@ -210,7 +213,7 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
             Pk_tmp = Pk_ij[i,j,:]*F[i]*F[j]
             plt.plot(ks,Pk_tmp,ls='--',lw=2.,label=label)
 
-    plt.errorbar(ks, Pk_hh, yerr=Pk_hh_err, color='black', label='halo-halo', zorder=1)
+    plt.errorbar(ks, Pk_hh, yerr=Pk_hh_err, color='black', label='halo-halo truth', zorder=1)
     plt.plot(ks, Pk_hh_best, color='dodgerblue', label='halo-halo fit', zorder=2)
     plt.xscale('log')
     plt.yscale('log')
@@ -220,7 +223,7 @@ def main(sim_name, sim_name_halo, z_nbody, z_ic, R_smooth, machine, fit_type, to
     plt.savefig("figs/Pk_hh_fit.png")
 
     plt.figure(2)
-    plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter',zorder=1)
+    plt.errorbar(ks,Pk_hm,yerr=Pk_hm_err,color='black',label='halo-matter truth',zorder=1)
     plt.plot(ks,Pk_hm_best,color='dodgerblue',label='halo-matter fit',zorder=2)
     plt.xscale('log')
     plt.yscale('log')
