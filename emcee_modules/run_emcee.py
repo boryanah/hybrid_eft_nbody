@@ -1,17 +1,17 @@
 #! /usr/bin/env python
 
+import time
+import sys
+
 import numpy as np
 import os
+import asdf
 import argparse
 import sacc
 import pyccl as ccl
 import emcee
-from InitializeFromChain import InitializeFromChain
-
-
 import yaml
-import time
-import sys
+#from InitializeFromChain import InitializeFromChain
 
 from likelihood import PowerData
 from theory import PowerTheory
@@ -110,11 +110,13 @@ def main(path2config,time_likelihood):
     ks = np.load(os.path.join(power_dir,"ks.npy"))
     Pk_hh = np.load(os.path.join(power_dir,"Pk_hh.npy"))
     #cov = np.load(os.path.join(power_dir,"covmat_hh.npy"))
-    N_modes = len(ks)
+    Lbox = config['default_params']['Lbox'] # TESTING CHANGE TODO TUKS
+    dk = ks[1]-ks[0]
     k_cut = (ks < power_params['kmax']) & (ks >= power_params['kmin'])
     Pk_hh = Pk_hh[k_cut]
     ks = ks[k_cut]
     # todo: change
+    N_modes = ks**2*dk*Lbox**3/(2.*np.pi**2)
     Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
     Pk_hh_err[0] = 1.e-6    
     cov = np.diag(Pk_hh_err)
@@ -141,17 +143,25 @@ def main(path2config,time_likelihood):
     tmp_dir = os.path.join(tmp_dir,'z%.3f'%z)
     Pk_all = np.load(os.path.join(tmp_dir,"Pk_all_%d.npy"%(int(R_smooth))))
     ks_all = np.load(os.path.join(tmp_dir,"ks_all.npy"))
+    Pk_tmps = asdf.open(os.path.join(tmp_dir,"Pk_templates_%d.asdf"%int(R_smooth)))['data']
     k_lengths = np.load(os.path.join(tmp_dir,"k_lengths.npy")).astype(int)
     Pk_all = Pk_all.reshape(int(len(ks_all)/k_lengths[0]),k_lengths[0])
     Pk_all = Pk_all[:,k_cut]
     k_length = Pk_all.shape[1]
+    fields_tmp = ['1', 'b_1', 'b_2', 'b_{\\nabla^2}', 'b_s']
     Pk_ij = np.zeros((nparams,nparams,k_length))
     c = 0
     for i in range(nparams):
         for j in range(nparams):
             if i > j: continue
-            Pk_ij[i,j,:] = Pk_all[c]
-            if i != j: Pk_ij[j,i,:] = Pk_all[c]
+            # TESTING
+            Pk_tmp = Pk_tmps[r'$('+fields_tmp[i]+','+fields_tmp[j]+r')$']
+            Pk_tmp = np.interp(ks,Pk_tmps['ks'],Pk_tmp)
+            # original
+            #Pk_tmp = Pk_all[c]
+            
+            Pk_ij[i,j,:] = Pk_tmp
+            if i != j: Pk_ij[j,i,:] = Pk_tmp
             c += 1
 
     # initialize theory

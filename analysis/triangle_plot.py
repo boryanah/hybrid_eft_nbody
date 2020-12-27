@@ -10,7 +10,8 @@ from getdist import plots, MCSamples
 # names and choices
 name_fid = "test"
 lab_fid = 'Hybrid EFT (4-parameter fit to $P^{hh}(k)$)'
-chain_dir = "/home/boryanah/repos/hybrid_eft_nbody/chains/"
+#chain_dir = "/home/boryanah/repos/hybrid_eft_nbody/chains/"
+chain_dir = "/global/homes/b/boryanah/repos/hybrid_eft_nbody/chains/"
 
 # what are we plotting
 bias_pars = ["f_1","f_2","f_3","f_4"]
@@ -18,7 +19,7 @@ filename = "triangle_Pk_hh.png"
 
 
 def get_par_names(name):
-    n_iter = 22000; w_rat = 8; n_par = 5; b_iter = 4000
+    n_iter = 40000; w_rat = 8; n_par = 5; b_iter = 2000
     par_names = ["f_0","f_1","f_2","f_3","f_4"]
     lab_names = ["F_0","F_1","F_2","F_3","F_4"]
     return n_iter, w_rat, n_par, b_iter, par_names, lab_names

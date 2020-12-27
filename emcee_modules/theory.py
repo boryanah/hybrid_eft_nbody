@@ -19,6 +19,9 @@ class PowerTheory(object):
         """
         Compute theoretical prediction for clustering power spectra.
         """
+
+        P_theory = np.einsum('i,ij...,j',p.flatten(),self.Pk_ij,p.flatten())
+        '''
         P_theory = np.zeros(len(self.Pk_ij[0,0,:]))
         for i in range(len(p)):
             for j in range(len(p)):
@@ -26,7 +29,7 @@ class PowerTheory(object):
                 f_i = p[i]
                 f_j = p[j]
                 P_theory += f_i*f_j*P_ij
-
+        '''
         return P_theory
         
     def setup(self):
