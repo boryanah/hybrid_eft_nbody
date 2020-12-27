@@ -70,7 +70,16 @@ def project_Cl(cosmo, halos, Pk_a_s, ks, a_s, k_min, k_max, want_plot=False):
     # Compute power spectra with and without cutoff
     cl_hh_tmp = ccl.angular_cl(cosmo, halos, halos, ells, p_of_k_a=pk_tmp)
     cl_hh = ccl.angular_cl(cosmo, halos, halos, ells)
-    
+
+    '''
+    # saving fake data
+    Cl_err = cl_hh*np.sqrt(2./(2*ells+1.))
+    cov = np.diag(Cl_err**2)
+    np.save("data_Cl/cl_gg.npy",cl_hh)
+    np.save("data_Cl/ells.npy",ells)
+    np.save("data_Cl/cov_gg.npy",cov)
+    '''
+
     if want_plot:
         # Let's plot the result
         plt.plot(ells, 1E4*cl_hh, 'r-', label='built-in tracer')
