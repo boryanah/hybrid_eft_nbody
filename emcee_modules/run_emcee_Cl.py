@@ -118,7 +118,7 @@ def main(path2config,time_likelihood):
     # todo: change
     N_modes = ks**2*dk*Lbox**3/(2.*np.pi**2)
     Pk_hh_err = Pk_hh*np.sqrt(2./N_modes)
-    Pk_hh_err[0] = 1.e-6    
+    Pk_hh_err[0] = 1.e6    
     cov = np.diag(Pk_hh_err**2)
 
     # initialize data object
