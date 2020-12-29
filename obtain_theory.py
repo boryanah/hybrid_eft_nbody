@@ -25,7 +25,6 @@ sys.path.append(home+'/repos/velocileptors')
 from velocileptors.LPT.cleft_fftw import CLEFT
 from choose_parameters import load_dict
 
-
 # colour table in HTML hex format
 hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4477AA',
            '#CC6677', '#AA4499', '#6699CC', '#AA4466', '#882255', '#661100',
@@ -53,7 +52,7 @@ def save_asdf(data_dict,filename,save_dir):
 
     # save the data and close file
     output_file = asdf.AsdfFile(data_tree)
-    output_file.write_to(os.path.join(save_dir,filename+".asdf"))
+    output_file.write_to(os.path.join(save_dir,filename))
     output_file.close()
 
 
