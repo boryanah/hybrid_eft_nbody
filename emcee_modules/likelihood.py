@@ -58,8 +58,8 @@ class PowerData(object):
         elif mode == 'Cl':
             # todo: change to sacc
             ells = np.load(os.path.join(power_dir,"ells.npy"))
-            Cl_gg = np.load(os.path.join(power_dir,"cl_gg.npy"))
-            cov = np.load(os.path.join(power_dir,"cov_cl_gg.npy"))
+            Cl_gg = np.load(os.path.join(power_dir,"cl_gg_z%4.3f.npy"%z))
+            cov = np.load(os.path.join(power_dir,"cov_cl_gg_z%4.3f.npy"%z))
             
             # cut in k-space todo: put in function tuks
             ell_cut = (ells < power_params['lmax']) & (ells >= power_params['lmin'])

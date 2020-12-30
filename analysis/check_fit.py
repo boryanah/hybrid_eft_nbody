@@ -66,8 +66,8 @@ def main(path2config):
 
     elif mode ==  'Cl':
         ells = np.load(os.path.join(power_dir,"ells.npy"))
-        Cl_gg = np.load(os.path.join(power_dir,"cl_gg.npy"))
-        cov = np.load(os.path.join(power_dir,"cov_cl_gg.npy"))
+        Cl_gg = np.load(os.path.join(power_dir,"cl_gg_z%4.3f.npy"%z))
+        cov = np.load(os.path.join(power_dir,"cov_cl_gg_z%4.3f.npy"%z))
         Cl_gg_err = np.sqrt(np.diag(cov))
 
         # templates, theory

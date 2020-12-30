@@ -78,7 +78,7 @@ def kmax2lmax(kmax, zeff, cosmo=None):
     """
 
     if cosmo is None:
-        logger.info('CCL cosmology object not supplied. Initializing with Planck 2018 cosmological parameters.')
+        print('CCL cosmology object not supplied. Initializing with Planck 2018 cosmological parameters.')
         cosmo = ccl.Cosmology(n_s=0.9649, A_s=2.1e-9, h=0.6736, Omega_c=0.264, Omega_b=0.0493)
 
     # Comoving angular diameter distance in Mpc/h
@@ -114,11 +114,11 @@ def inrange(p, params):
     return np.all((p<=params[:, 2]) & (p>=params[:, 1]))
 
 def lnprob(p, params, Data, Theory):
-    if inrange(p,params):
-        try:
+    if inrange(p, params):
+        if True:#try:
             theory = Theory.compute_theory(p)
             lnP = Data.compute_likelihood(theory)
-        except:
+        if False:#except: TESTING
             lnP = -np.inf
     else:
         lnP = -np.inf
@@ -136,14 +136,26 @@ def main(path2config,time_likelihood):
     cl_params = config['cl_params']
     ch_config_params = config['ch_config_params']
     fit_params = config['fit_params']
+
+    # parameters to fit
+    nparams = len(fit_params.keys())
+    param_mapping = {}
+    params = np.zeros((nparams, 4))
+    for key in fit_params.keys():
+        param_mapping[key] = fit_params[key][0]
+        params[fit_params[key][0], :] = fit_params[key][1:]
     
-    # cosmological parameters todo: how to interpolate????
-    cosmo_dict = {}
-    for key in COSMO_PARAM_KEYS:
-        cosmo_dict[key] = default_params[key]
-        
     # Cosmology
-    cosmo = ccl.Cosmology(**cosmo_dict)
+    if set(COSMO_PARAM_KEYS) == set(default_params.keys()):
+        print("We are NOT varying the cosmology")
+        #cosmo_dict = {}
+        #for key in COSMO_PARAM_KEYS:
+        #cosmo_dict[key] = default_params[key]
+        cosmo = ccl.Cosmology(**default_params)
+    else:
+        print("We ARE varying the cosmology")
+        cosmo = None
+    
     if power_params['lmax'] == 'kmax':
         lmax = kmax2lmax(power_params['kmax'], power_params['z'], cosmo)
         power_params['lmax'] = lmax
@@ -156,8 +168,12 @@ def main(path2config,time_likelihood):
     Data.setup()
         
     # read theory parameters
-    Theory = PowerTheory(mode, cosmo, Data.x, Data.z, template_params, cl_params, power_params)
+    Theory = PowerTheory(mode, Data.x, Data.z, template_params, cl_params, power_params, default_params, param_mapping)
     Theory.setup()
+
+    # initialize the Cl templates
+    if mode == 'Cl' and cosmo != None:
+        Theory.init_cl_ij(cosmo)
 
     # Make path to output
     if not os.path.isdir(os.path.expanduser(ch_config_params['path2output'])):
@@ -180,15 +196,7 @@ def main(path2config,time_likelihood):
     if not pool.is_master():
         pool.wait()
         sys.exit(0)
-
-    # parameters to fit
-    nparams = len(fit_params.keys())
-    param_mapping = {}
-    params = np.zeros((nparams, 4))
-    for key in fit_params.keys():
-        param_mapping[key] = fit_params[key][0]
-        params[fit_params[key][0], :] = fit_params[key][1:]
-
+    
     # just time the likelihood calculation
     if time_likelihood:
         time_lnprob(params, Data, Theory)

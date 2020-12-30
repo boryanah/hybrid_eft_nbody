@@ -1,7 +1,8 @@
 # Comment out the probes you don't need
 # CAREFUL: yaml is super sensitive to spaces - don't use tabs
-modus_operandi: 'Pk'
-#modus_operandi: 'Cl'
+# Note: right now the code only knows how to handle 6 cosmological parameters in default or in fit and expects default to have only cosmological parameters and all bias parameters must be in fit
+#modus_operandi: 'Pk'
+modus_operandi: 'Cl'
 
 # Power spectrum parameters
 power_params:
@@ -24,17 +25,13 @@ cl_params:
     has_magnification: null
     transfer_function: boltzmann_class
     matter_power_spectrum: halofit
-    bg:
-        b_bin0: 1.
-        b_bin1: 1.
-        b_bin2: 1.
-        b_bin3: 1.
 
 # Parameters for the theory templates
 template_params:
 #    template_dir: '/global/cscratch1/sd/boryanah/data_hybrid/abacus/AbacusSummit_base_c000_ph006/'
     template_dir: '~/repos/hybrid_eft_nbody/data/AbacusSummit_base_c000_ph006/'
-    zs: [1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1]
+    zs: [0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1]
+    bs: [1.00161262, 1.05627025, 1.11360065, 1.17325432, 1.23491261, 1.42925231, 1.63342514]
     R_smooth: 0.
     Lbox: 2000.
     fields: ['1', 'b_1', 'b_2', 'b_{\nabla^2}', 'b_s']
