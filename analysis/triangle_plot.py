@@ -57,7 +57,6 @@ plt.show()
 '''
 
 max_probs = np.argmax(fiducial_probs)
-print("best fit = ",np.array2string(fiducial_chains[max_probs],separator = ', '),fiducial_probs[max_probs])
 
 
 # removing burn-in
@@ -102,7 +101,9 @@ print("\\label{tab:chi2_tests}")
 print("\\caption{Table}")
 print("\\end{table}")
 
-print("means = ",means[:,0])
+print("F_mean = ",means[:,0])
+print("F_best = np.array("+np.array2string(fiducial_chains[max_probs],separator = ', ')+")")
+print("lnprob_best = ",fiducial_probs[max_probs])
 
 # Triangle plot
 g = plots.getSubplotPlotter()

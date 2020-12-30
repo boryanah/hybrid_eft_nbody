@@ -91,22 +91,23 @@ def main(path2config):
         power_gg = Cl_gg
 
     # best solution from chains
-    #F = np.array([1., -0.08, -0.34, 0.580, 0.24])
-    #F = np.array([1., 1., 1., 1., 1.])
-    #F = np.array([ 1., 1.57785673, -0.85011509, -0.13293844 ,-5.20912406])
-    #F = np.array([ 1.,   0.99999853,  0.60774282, -0.99997625,  4.9999987])
-    #F = np.array([ 1.        ,  0.29236532, -0.63308344,  0.62056147,  0.01030821])
-    #F = np.array([ 1.        , -0.12947702, -0.11833105, -1.14102289, -0.16499079]) # cl
-    #F = np.array([ 1.        , -0.05398823, -0.82415604,  0.46853151, -0.28520872])
-    F = np.array([ 1.        , -0.04971766, -0.91626549,  0.45250239, -0.13577488])
-    #F = np.array([ 1.        ,  1.88677959, -2.05659463, -1.27924613,  4.91586557])
+    #F_best = np.array([1., -0.08, -0.34, 0.580, 0.24])
+    #F_best = np.array([1., 1., 1., 1., 1.])
+    #F_best = np.array([ 1., 1.57785673, -0.85011509, -0.13293844 ,-5.20912406])
+    #F_best = np.array([ 1.,   0.99999853,  0.60774282, -0.99997625,  4.9999987])
+    #F_best = np.array([ 1.        ,  0.29236532, -0.63308344,  0.62056147,  0.01030821])
+    #F_best = np.array([ 1.        , -0.12947702, -0.11833105, -1.14102289, -0.16499079]) # cl
+    #F_best = np.array([ 1.        , -0.05398823, -0.82415604,  0.46853151, -0.28520872])
+    #F_best = np.array([ 1.        , -0.04971766, -0.91626549,  0.45250239, -0.13577488])
+    #F_best = np.array([ 1.        ,  1.88677959, -2.05659463, -1.27924613,  4.91586557])
+    F_best =  np.array([ 1.        , -0.04009133, -1.02421888,  0.39142809,  0.45214603])
     
     # obtain the prediction for the gg power spectrum
-    power_gg_best, power_gm_best, P_hat = get_P(power_ij, F, len(x))
+    power_gg_best, power_gm_best, P_hat = get_P(power_ij, F_best, len(x))
 
     # plot solution
     fig, axs = plt.subplots(1, 2, figsize=(14,6))
-    fig.suptitle(r"Bias parameters: %.2f, %.2f, %.2f, %.2f"%(F[1],F[2],F[3],F[4]))
+    fig.suptitle(r"Bias parameters: %.2f, %.2f, %.2f, %.2f"%(F_best[1],F_best[2],F_best[3],F_best[4]))
     plt.subplots_adjust(left=0.1,right=0.95,top=0.90,bottom=0.15,wspace=0.15)
     plt.subplot(1, 2, 1)
     fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']

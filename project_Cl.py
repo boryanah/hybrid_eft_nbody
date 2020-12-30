@@ -31,32 +31,25 @@ DEFAULTS['machine'] = 'NERSC'
 def project_Cl(cosmo, tracer, Pk_a_s, ks, a_s, want_plot=False):
     # number of redshifts
     num_zs = Pk_a_s.shape[0]
+
+    # hubble parameter
+    h = cosmo._params_init_kwargs['h']
     
     # change the order cause that's what CCL prefers
     i_sort = np.argsort(a_s)
     a_s = a_s[i_sort]
+    Pk_a_s = Pk_a_s[i_sort,:]
     assert num_zs == len(a_s), "Different number of input spectra and redshifts"
-
-    # TESTING
-    Pk_a_s = np.abs(Pk_a_s)
-    
-    # take the logarithm
-    lpk_array = np.log(Pk_a_s)
-    
-    # simple power spectrum for testing
-    #lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo,ks,a) for a in a_s]))
-    #cl_tt = ccl.angular_cl(cosmo, tracer, tracer, ells)
-    
-    # Create a Pk2D object
-    pk_tmp = ccl.Pk2D(a_arr=a_s, lk_arr=np.log(ks), pk_arr=lpk_array, is_logp=True)
 
     # wave numbers
     ells = np.geomspace(2,1000,20)
 
-    # Compute power spectra with and without cutoff
-    cl_tt_tmp = ccl.angular_cl(cosmo, tracer, tracer, ells, p_of_k_a=pk_tmp)
-    
+
     '''
+    # simple power spectrum for testing
+    lpk_array = np.log(np.array([ccl.nonlin_matter_power(cosmo, ks*h, a) for a in a_s]))
+    cl_tt = ccl.angular_cl(cosmo, tracer, tracer, ells)
+
     # generating fake data
     Cl_err = cl_tt*np.sqrt(2./(2*ells+1.))
     cov = np.diag(Cl_err**2)
@@ -64,9 +57,25 @@ def project_Cl(cosmo, tracer, Pk_a_s, ks, a_s, want_plot=False):
     np.save("data_power/ells.npy",ells)
     np.save("data_power/cov_cl_gg.npy",cov)
     '''
+    
+    # Create a Pk2D object, giving log k in Mpc^-1 and pk_arr in Mpc^3
+    #lpk_array = np.log(Pk_a_s/h**3)
+    #pk_tmp = ccl.Pk2D(a_arr=a_s, lk_arr=np.log(ks*h), pk_arr=lpk_array, is_logp=True)
+    pk_tmp = ccl.Pk2D(a_arr=a_s, lk_arr=np.log(ks*h), pk_arr=Pk_a_s/h**3, is_logp=False)
+
+    
+    # Compute power spectra with and without cutoff
+    cl_tt_tmp = ccl.angular_cl(cosmo, tracer, tracer, ells, p_of_k_a=pk_tmp)
+
 
     if want_plot:
-        # Let's plot the result
+        # plot the power spectra
+        plt.plot(np.log(ks*h),lpk_array[-1,:],label="ccl")
+        plt.plot(np.log(ks*h),np.log(Pk_a_s[-1,:]/h**3),label="buba")
+        plt.legend()
+        plt.show()
+        
+        # plot the angular power spectra
         plt.plot(ells, 1E4*cl_tt, 'r-', label='built-in tracer')
         plt.plot(ells, 1E4*cl_tt_tmp, 'k--', label='custom tracer')
         plt.xscale('log')
@@ -85,13 +94,11 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
 
     # redshift choice
     #z_s = np.array([3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])
-    z_s = np.array([1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1])
-    z_s = np.sort(z_s)
+    z_s = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1])
     a_s = 1./(1+z_s)
 
     # test with class
-    home = os.path.expanduser("~")
-    class_dir = home+"/repos/AbacusSummit/Cosmologies/abacus_cosm000/"
+    class_dir = os.path.expanduser("~/repos/AbacusSummit/Cosmologies/abacus_cosm000/")
 
     # load parameters
     user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
@@ -102,7 +109,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
     cosmo = ccl.Cosmology(**cosmo_dict)
 
     # Redshift distributions
-    nz_s = np.exp(-((z_s-0.5)/0.05)**2/2)
+    nz_s = np.exp(-((z_s-0.8)/0.05)**2/2)
 
     # Bias
     bz_s = 0.95/ccl.growth_factor(cosmo,a_s)
@@ -111,7 +118,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
     galaxies = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(z_s, nz_s), bias=(z_s, bz_s), mag_bias=None)
 
     # read in CLASS power spectra
-    ks, Pk = np.loadtxt(class_dir+'abacus_cosm000.z%d_pk_cb.dat'%(0+1),unpack=True)
+    ks, Pk = np.loadtxt(class_dir+'abacus_cosm000.z%d_pk_cb.dat'%(1),unpack=True)
     Pk_a_s = np.zeros((len(a_s),len(ks)))
     for i in range(len(a_s)):
         print(i)
@@ -126,6 +133,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
     for i in range(len(a_s)):
         # ccl expects Mpc units todo: improve and ask
         h = cosmo_dict['h']
+        # give the ks in Mpc^-1 and get Pk_gg in [Mpc/h]^3
         Pk_gg = ccl.nonlin_matter_power(cosmo, k*h, a_s[i])*h**3
         cov = np.diag(Pk_gg**2*(2./N_modes))
         np.save("data_power/pk_gg_z%4.3f.npy"%z_s[i],Pk_gg)
@@ -133,7 +141,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
         np.save("data_power/cov_pk_gg_z%4.3f.npy"%z_s[i],cov)
     
     # load k and P(k,a)
-    ells, cl_tt_tmp = project_Cl(cosmo, galaxies, Pk_a_s, ks, a_s, k_min, k_max, want_plot)
+    ells, cl_tt_tmp = project_Cl(cosmo, galaxies, Pk_a_s, ks, a_s, want_plot)
         
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
