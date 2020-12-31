@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import numpy as np
 from astropy.table import Table
@@ -16,11 +17,11 @@ BIAS_PARAM_KEYS = ['f_0', 'f_1', 'f_2', 'f_3', 'f_4']
 
 class PowerTheory(object):
     """
-    Core Module for calculating HSC clustering cls.
+    Core Module for calculating clustering power spectra.
     """
     def __init__(self, mode, x, z, template_params, cl_params, power_params, default_params, param_mapping):
         """
-        Constructor of the HSCCoreModule
+        Constructor of the theory module
         """
 
         self.mode = mode # Cl or Pk mode
@@ -34,7 +35,9 @@ class PowerTheory(object):
 
 
     def sort_params(self, p):
-        
+        """
+        Parse the parameter values.
+        """
         # separate the cosmology parameters
         if set(COSMO_PARAM_KEYS) == set(self.default_params.keys()):
             # not varying the cosmology
@@ -47,7 +50,7 @@ class PowerTheory(object):
                 elif key in self.default_params.keys():
                     cosmo_dic[key] = self.default_params[key]
                 else:
-                    print("Not all cosmo params are provided"); exit(0)
+                    print("Not all cosmo params are provided in default_params and fit_params"); exit(0)
             cosmo = ccl.Cosmology(**cosmo_dic)
 
         # separate the bias parameters
@@ -56,10 +59,8 @@ class PowerTheory(object):
             if key in self.param_mapping.keys():
                 f[k] = p[self.param_mapping[key]]
             else:
-                print("Not all bias params are varied"); exit(0)
+                print("Not all bias params are varied in fit_params"); exit(0)
        
-        # TESTING
-        #f = p[:]
         return cosmo, f
         
     def compute_theory(self, p):
@@ -74,15 +75,46 @@ class PowerTheory(object):
             # Compute Pk = f_i f_j Pk_ij or Cl = f_i f_j Cl_ij
             theory = np.einsum('i,ij...,j', f.flatten(), self.power_ij, f.flatten())
             return theory
+
         
         # if dealing with angular power spectra
         if cosmo != None:
-            self.init_cl_ij(cosmo) # todo would need compute_cl_ij and use interpolation
-        theory = np.einsum('i,ij...,j', f.flatten(), self.Cl_ij, f.flatten())
+            # version 1
+            # this projects each of the pk_ij into cl_ij to get assembled
+            #self.init_cl_ij(cosmo) # todo would need compute_cl_ij and use interpolation
+
+            # version 2
+            # this assembles the pk_ij templates into pk and then projects into cl [slightly faster]
+            theory = self.evaluate_cl_ij(f, cosmo)
+            return theory
+        
+        theory = np.einsum('i,ij...,j', f.flatten(), self.Cl_ij, f.flatten())    
         return theory
+    
+    def evaluate_cl_ij(self, f, cosmo):
 
+        # galaxy tracer
+        tracer = ccl.NumberCountsTracer(cosmo, has_rsd=self.cl_params['has_rsd'], dndz=(self.z_s, self.nz_s), bias=(self.z_s, self.bz_s), mag_bias=self.cl_params['has_magnification'])
+
+        ks = self.power_ij['ks']
+        pk_a = np.zeros((len(self.a_s), len(self.power_ij['ks'])))
+        for k in range(len(self.a_s)):
+            pk = np.zeros(len(ks))
+            for i in range(len(self.fields)):
+                for j in range(len(self.fields)):
+                    if i > j: continue
+                    p_this = (f.flatten()[i]*f.flatten()[j]*np.array([self.power_ij[k][r'$('+self.fields[i]+','+self.fields[j]+r')$']])).flatten()
+                    pk += p_this
+                    if i != j: pk += p_this
+            pk_a[k,:] = pk
+        ells, cl = project_Cl(cosmo, tracer, pk_a, ks, self.a_s)
+        cl = np.interp(self.x, ells, cl)
+        return cl
+        
     def init_cl_ij(self, cosmo):
-
+        """
+        Compute theoretical prediction for the angular power spectra templates
+        """
         # galaxy tracer
         tracer = ccl.NumberCountsTracer(cosmo, has_rsd=self.cl_params['has_rsd'], dndz=(self.z_s, self.nz_s), bias=(self.z_s, self.bz_s), mag_bias=self.cl_params['has_magnification'])
 
@@ -100,8 +132,13 @@ class PowerTheory(object):
                 Cl_ij[i,j,:] = np.interp(self.x, ells, Cl_tmp)
                 if i != j: Cl_ij[j,i,:] = np.interp(self.x, ells, Cl_tmp)        
         self.Cl_ij = Cl_ij
+        # if want to save the templates
+        #self.save_cl_ij(); 
         
     def save_cl_ij(self):
+        """
+        Save templates into an ASDF file.
+        """
         # dictionary for saving the templates
         data_dic = {}
         for i in range(len(self.fields)):
@@ -115,7 +152,7 @@ class PowerTheory(object):
         
     def load_cl_ij(self):
         """
-        Compute theoretical prediction for the angular power spectra templates
+        Load templates from ASDF file.
         """
         # if not varying the cosmology
         Cl_data = asdf.open(os.path.join(self.tmp_dir,"z%4.3f"%self.z,"Cl_templates_%d.asdf"%int(self.R_smooth)))['data']

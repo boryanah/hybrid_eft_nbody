@@ -61,7 +61,7 @@ def read_halo_gadget(halo_fns,i_chunk,n_chunks,read_header=False):
     X = data['PX_CM']
     Y = data['PY_CM']
     Z = data['PZ_CM']
-    m_halo = data['MASS']# TESTING
+    m_halo = data['MASS']
     del data
     pos_halo = np.vstack((X,Y,Z)).T
 

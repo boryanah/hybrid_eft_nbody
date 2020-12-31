@@ -28,6 +28,10 @@ DEFAULTS['z_ic'] = 99.
 DEFAULTS['R_smooth'] = 0.
 DEFAULTS['machine'] = 'NERSC'
 
+def a2z(a):
+    z = 1./a-1
+    return z
+    
 def project_Cl(cosmo, tracer, Pk_a_s, ks, a_s, want_plot=False):
     # number of redshifts
     num_zs = Pk_a_s.shape[0]
@@ -53,9 +57,9 @@ def project_Cl(cosmo, tracer, Pk_a_s, ks, a_s, want_plot=False):
     # generating fake data
     Cl_err = cl_tt*np.sqrt(2./(2*ells+1.))
     cov = np.diag(Cl_err**2)
-    np.save("data_power/cl_gg.npy",cl_tt)
+    np.save("data_power/cl_gg_z%4.3f.npy"%a2z(a_s[0]),cl_tt)
     np.save("data_power/ells.npy",ells)
-    np.save("data_power/cov_cl_gg.npy",cov)
+    np.save("data_power/cov_cl_gg_z%4.3f.npy"%a2z(a_s[0]),cov)
     '''
     
     # Create a Pk2D object, giving log k in Mpc^-1 and pk_arr in Mpc^3
@@ -113,7 +117,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_plot=False):
 
     # Bias
     bz_s = 0.95/ccl.growth_factor(cosmo,a_s)
-
+    
     # This tracer will only include the density contribution
     galaxies = ccl.NumberCountsTracer(cosmo, has_rsd=False, dndz=(z_s, nz_s), bias=(z_s, bz_s), mag_bias=None)
 

@@ -35,13 +35,11 @@ def get_mesh(pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
 
     '''
-    # TESTING
+    # TESTING Chirag's version not working for some reason
     pm = ParticleMesh(BoxSize=Lbox, Nmesh=[N_dim,N_dim,N_dim], dtype='f8')
     fpos = cat['Position'].compute()
     wts = cat['Value'].compute()
     play = pm.decompose(fpos)
-    #if key is not None:
-    #wts -= np.mean(wts) # TESTING
     if pm.comm.rank == 0:
         print(wts.min(),wts.max(),np.mean(wts))
     mesh = pm.paint(fpos, mass=wts, layout=play)
@@ -65,8 +63,6 @@ def get_cross_ps(first_mesh,second_mesh,dk=None):
     Pk_cross = r_cross.power['power']#.real
     ks = r_cross.power['k'] # [Mpc/h]^-1
     P_sn = r_cross.attrs['shotnoise']
-    # TESTING perhaps don't subtract
-    #Pk_cross -= P_sn
     return ks, Pk_cross
 
 def predict_Pk(f_params,ks_all,Pk_all,k_lengths):

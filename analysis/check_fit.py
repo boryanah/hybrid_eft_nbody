@@ -15,6 +15,15 @@ from solve_power import get_P
 DEFAULTS = {}
 DEFAULTS['path2config'] = '../config/bias_pk.yaml'
 
+def plot_tmps(F, power_ij, x):
+    fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
+    for i in range(len(F)):
+        for j in range(len(F)):
+            if i > j: continue
+            label = r'$\langle '+fields[i]+","+fields[j]+r" \rangle$"
+            power_tmp = power_ij[i,j,:]*F[i]*F[j]
+            plt.plot(x, power_tmp, ls='--', lw=2., label=label)
+
 def main(path2config):
     
     # Read params from yaml
@@ -91,16 +100,10 @@ def main(path2config):
         power_gg = Cl_gg
 
     # best solution from chains
-    #F_best = np.array([1., -0.08, -0.34, 0.580, 0.24])
-    #F_best = np.array([1., 1., 1., 1., 1.])
-    #F_best = np.array([ 1., 1.57785673, -0.85011509, -0.13293844 ,-5.20912406])
-    #F_best = np.array([ 1.,   0.99999853,  0.60774282, -0.99997625,  4.9999987])
-    #F_best = np.array([ 1.        ,  0.29236532, -0.63308344,  0.62056147,  0.01030821])
-    #F_best = np.array([ 1.        , -0.12947702, -0.11833105, -1.14102289, -0.16499079]) # cl
-    #F_best = np.array([ 1.        , -0.05398823, -0.82415604,  0.46853151, -0.28520872])
-    #F_best = np.array([ 1.        , -0.04971766, -0.91626549,  0.45250239, -0.13577488])
     #F_best = np.array([ 1.        ,  1.88677959, -2.05659463, -1.27924613,  4.91586557])
-    F_best =  np.array([ 1.        , -0.04009133, -1.02421888,  0.39142809,  0.45214603])
+    #F_best = np.array([ 1.        , -0.04680292, -1.08717079, -0.87243438,  0.60869264])
+
+    F_best = np.array([ 1.        , -0.06034398, -1.11353898, -0.3002241 ,  1.12157416])
     
     # obtain the prediction for the gg power spectrum
     power_gg_best, power_gm_best, P_hat = get_P(power_ij, F_best, len(x))
@@ -110,8 +113,7 @@ def main(path2config):
     fig.suptitle(r"Bias parameters: %.2f, %.2f, %.2f, %.2f"%(F_best[1],F_best[2],F_best[3],F_best[4]))
     plt.subplots_adjust(left=0.1,right=0.95,top=0.90,bottom=0.15,wspace=0.15)
     plt.subplot(1, 2, 1)
-    fields = ['1','\delta','\delta^2','\\nabla^2 \delta','s^2']
-    
+    plot_tmps(F_best, power_ij, x)    
     plt.errorbar(x, power_gg, yerr=power_gg_err, color='black', label='truth', zorder=1)
     plt.plot(x, power_gg_best, color='dodgerblue', label='fit', zorder=2)
     plt.xscale('log')
@@ -122,7 +124,7 @@ def main(path2config):
     elif mode == 'Cl':
         plt.xlabel(r"$\ell$")
         plt.ylabel(r"$C_\ell$")
-    plt.legend()
+    plt.legend(fontsize=10)
 
     plt.subplot(1, 2, 2)
     plt.plot(x, power_gg_best/power_gg-1., color='k')
