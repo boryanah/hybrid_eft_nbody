@@ -19,4 +19,4 @@ which mpirun
 
 echo $SLURM_NTASKS
 
-mpirun -n $SLURM_NTASKS ../obtain_fields.py --sim_name 
+mpirun -n $SLURM_NTASKS ../../obtain_fields.py --sim_name 

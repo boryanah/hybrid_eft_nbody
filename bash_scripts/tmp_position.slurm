@@ -1,20 +1,8 @@
 #!/bin/bash -l
 
-##SBATCH --array=0
-##SBATCH --partition=normal
-##SBATCH --account=desi
-##SBATCH --ntasks=32
-##SBATCH -q debug
-##SBATCH --mem=128GB
-##SBATCH -C knl
-##SBATCH --account=m1727
-##SBATCH --cpus-per-task=1
-##SBATCH --mem-per-cpu=32GB
-
 #SBATCH --tasks-per-node=1
 #SBATCH --nodes=34
 #SBATCH --mem=64GB # memory per node
-
 
 ##SBATCH -q regular
 #SBATCH -q debug
@@ -31,5 +19,4 @@ conda activate desc
 
 echo $SLURM_NTASKS
 
-#python obtain_position.py # not parallel is run on a single node with 45 GB and 1 task per node
-mpirun -n $SLURM_NTASKS python obtain_position.py
+mpirun -n $SLURM_NTASKS ../../obtain_position.py --machine NERSC 
