@@ -36,8 +36,6 @@ DEFAULTS['machine'] = 'NERSC'
 
 def main(sim_name, z_nbody, z_ic, R_smooth, machine, testing=False, convert_to_bigfile=False, resample=False):    
 
-    print(machine)
-    quit()
     # TESTING THIS IS SINCE WE ONLY USE ALAN FOR CONVERSION
     if machine == 'alan':
         print("I am gonna assume you are converting an AbacusSummit density file [PPD=2304, L=2000] into bigfile")
