@@ -1,24 +1,38 @@
 # Main functions:
 
-fields -- load density and compute smoothed fields
+obtain_fields.py -- load density and compute smoothed fields (delta, delta_sq, nabla_sq, s)
 
-positions -- save positions weighted by fields for matter; save halos
+obtain_positions.py -- save positions weighted by fields for matter and also save halos
 
-templates -- assemble matter files and compute 15 terms using templates at given redshift
+obtain_templates.py -- assemble matter files and compute 15 terms using templates at given redshift
 
-power -- assemble halo files and compute true halo-halo halo-matter and matter-matter
+obtain_theory.py -- interpolate between the LPT calculation on large scales and the N-body templates on small scales
 
-covariance -- probably should be getting covariance from elsewhere but computes jackknife errors given halo pos (needs assembling)
+obtain_power.py -- assemble halo files and compute true halo-halo halo-matter and matter-matter power spectra
 
-solve -- analytically fit the power spectrum given templates, true power and covariance
+solve_power.py -- analytically fit the power spectrum given templates, true power and covariance
 
-fit -- fit using minimizing the power spectrum given templates, true power and covariance
+project_Cl.py -- project the 3D power spectrum P(k,a) into the angular power spectrum C_ell
 
-# Also available functions:
+# Extra functions:
 
-obtain_halo_positions, plot_templates and plot_density
+obtain_covariance_gadget.py -- probably should be getting covariance from elsewhere but computes jackknife errors given halo pos (needs assembling)
+
+fit_power.py -- fit using minimizing the power spectrum given templates, true power and covariance
+
+obtain_halo_positions.py -- save just the halo positions without any of the particle information
+
+plot_templates.py -- plot the 15 templates
+
+plot_density.py -- plot the density fields of the initial conditions
+
+# Simulations used:
+
+The simulations we are using are listed in bash_scripts/sim_names.txt. The cosmologies are c100-105, c112-113, c117-120, c125-126.
 
 # Memory usage:
+
+Note: We are now using the base sims, so all of the numbers below are off.
 
 convert to bigfile and compute fields for Sim1024 took 2663s on the login node (fell asleep! wasn't on purpose)
 
@@ -35,8 +49,3 @@ obtain power took 4 tasks on a single node total 64 GB and < 18 mins (requested 
 obtain halo positions took 421.4453125 MB and 8.194952011108398 s for hugebase
 
 obtain power for Pk_hh only took 2 mins with 64 GB for hugebase (and threshold)
-
-Note: can't estimate memory usage using mpirun not too sure why
-
-squeue --user=boryanah
-top -u

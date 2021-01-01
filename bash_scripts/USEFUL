@@ -1,6 +1,3 @@
-todo:
-remove README.md
-
 plan:
 run all sbatch fields for all sims [bash]
 run all sbatch positions for all sims at z=1.1 [bash]
