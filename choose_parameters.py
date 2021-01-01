@@ -51,9 +51,8 @@ def load_dict(z_nbody,sim_name,machine):
         n_s = header['n_s']
         Omega_b = header['omega_b']/h**2
         Omega_c = header['omega_cdm']/h**2
-        sigma8 = 0.807952#header['sigma8_m']
-        print("Need to figure out how to read the sigma 8 properly")
-        #f_growth = header['f_growth']
+        class_dict = get_dict(sim_name)
+        sigma8 = class_dict['sigma8_m']
         
     # data directory: gadget
     elif sim_code == 'gadget':

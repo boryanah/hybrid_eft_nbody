@@ -1,0 +1,16 @@
+todo:
+remove README.md
+
+plan:
+run all sbatch fields for all sims [bash]
+run all sbatch positions for all sims at z=1.1 [bash]
+run all sbatch templates for all sims at z=1.1 [bash]
+run all theory for all sims at z=1.1 [separate]
+delete all fits files for all sims at z=1.1  [separate]
+
+repeat for z=0.8,0.5,0.4,0.3,0.2,0.1
+
+tips:
+cat -A filename
+truncate -s -1 filename
+bash and not sh on alan
