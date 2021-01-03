@@ -4,6 +4,8 @@ import glob
 import numpy as np
 import asdf
 
+from tools.read_params import get_dict
+
 def load_dict(z_nbody,sim_name,machine):
     # user choices
     #R_smooth = 4.
@@ -17,7 +19,6 @@ def load_dict(z_nbody,sim_name,machine):
         sim_code = 'abacus'
     else:
         sim_code = 'gadget'
-    print(sim_code)
 
     # data directory: abacus
     if sim_code == 'abacus':
@@ -30,9 +31,9 @@ def load_dict(z_nbody,sim_name,machine):
             data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
             if 'c000_ph000' in sim_name:
                 dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/AbacusSummit_hugebase_c000_ph000/"
+                print("for any box that is cosmo 000 phase 000 can use the hugebase field files")
             else:
                 dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/"
-            print("for any box that is phase 000 can use the hugebase field files")
 
         cat_dir = os.path.join(sim_dir,"z%.3f"%z_nbody)
         n_chunks = len(glob.glob(os.path.join(cat_dir,'halo_info/halo_info_*.asdf')))
@@ -52,7 +53,7 @@ def load_dict(z_nbody,sim_name,machine):
         Omega_b = header['omega_b']/h**2
         Omega_c = header['omega_cdm']/h**2
         class_dict = get_dict(sim_name)
-        sigma8 = class_dict['sigma8_m']
+        sigma8 = np.float(class_dict['sigma8_m'])
         
     # data directory: gadget
     elif sim_code == 'gadget':

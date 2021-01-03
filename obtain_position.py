@@ -68,19 +68,20 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_chunk=True):
     N_dim = user_dict['N_dim']
     z_ic = user_dict['z_ic']
     Lbox = user_dict['Lbox']
-    
+
     # names of the 5 fields 
     field_names = ['delta', 'delta_sq', 'nabla_sq', 's_sq']
     factors = {'delta': 1, 'delta_sq': 2, 'nabla_sq': 1, 's_sq': 2}
     
     # load the cosmology
     cosmo = ccl.Cosmology(**cosmo_dict)
-
+    
     # factor to scale the density as suggested in Modi et al.
     D_z_nbody = ccl.growth_factor(cosmo,1./(1+z_nbody))
     D_z_ic = ccl.growth_factor(cosmo,1./(1+z_ic))
     D_growth = D_z_nbody/D_z_ic
 
+    
     if want_chunk:
         fields = {}
         for i in range(len(field_names)):
@@ -128,7 +129,8 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_chunk=True):
             
             lagr_pos, pos_snap, pos_halo, m_halo = read_gadget(ic_fns,snap_fns,fof_fns,i_chunk,n_chunks,want_chunk=want_chunk)
 
-        save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir,mass=m_halo)
+        # TESTING
+        #save_pos(pos_halo,"halo_%03d"%i_chunk,data_dir,mass=m_halo)
         del pos_halo, m_halo
 
         # offset the positions to match the chunk
