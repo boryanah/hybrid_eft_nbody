@@ -53,8 +53,11 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     # get a mesh list for all 5 cases
     mesh_list = []
     for key in field_names:
-        pos_snap_fns = sorted(glob.glob(data_dir+"pos_"+key+"_snap_*"))
-        mesh = get_mesh(pos_snap_fns,N_dim,Lbox,interlaced)
+        if key == 'ones':
+            pos_snap_fns = sorted(glob.glob(data_dir+"pos_delta_snap_*"))
+        else:
+            pos_snap_fns = sorted(glob.glob(data_dir+"pos_"+key+"_snap_*"))
+        mesh = get_mesh(key, pos_snap_fns, N_dim, Lbox, interlaced)
         mesh_list.append(mesh)
     print("Obtained mesh lists for all fields")
     
