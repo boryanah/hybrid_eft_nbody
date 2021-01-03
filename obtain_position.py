@@ -152,7 +152,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine, want_chunk=True):
         del lagr_pos
 
         # save the particles as they are for the ones field
-        save_pos(pos_snap,"ones_snap_%03d"%i_chunk,data_dir)
+        #save_pos(pos_snap,"ones_snap_%03d"%i_chunk,data_dir) # TESTING
         for key in fields.keys():
             values = (fields[key]*D_growth**factors[key])[lagr_ijk[:,0],lagr_ijk[:,1],lagr_ijk[:,2]]
        
