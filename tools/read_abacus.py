@@ -4,7 +4,8 @@ import os
 def read_abacus(sim_name,z_nbody,i_chunk):
 
     # catalog directory
-    cat_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
+    #cat_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
+    cat_dir = "/global/cscratch1/sd/boryanah/data_hybrid/tape_data/"+sim_name+"/halos/"
     z_dir = os.path.join(cat_dir,"z%.3f"%z_nbody)
     chunk_fn = os.path.join(z_dir,'halo_info','halo_info_%03d.asdf'%i_chunk)
     

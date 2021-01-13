@@ -1,6 +1,7 @@
-#!/bin/bash
-input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names.txt"
-index_z=0
+#!/bin/bash#
+#input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names.txt"
+input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names_small.txt"
+index_z=6
 exec="sbatch "
 output="sbatch_jobs/sbatch_all_templates_${index_z}.sh"
 counter=0

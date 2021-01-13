@@ -27,7 +27,8 @@ def load_dict(z_nbody,sim_name,machine):
             data_dir = "/mnt/gosling1/boryanah/"+sim_name+"/z%.3f/"%z_nbody
             dens_dir = "/mnt/gosling1/boryanah/"+sim_name+"/"
         elif machine == 'NERSC':
-            sim_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
+            #sim_dir = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/halos/"
+            sim_dir = "/global/cscratch1/sd/boryanah/data_hybrid/tape_data/"+sim_name+"/halos/"
             data_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/"+sim_name+"/z%.3f/"%z_nbody
             if 'c000_ph000' in sim_name:
                 dens_dir = "/global/cscratch1/sd/boryanah/data_hybrid/abacus/AbacusSummit_hugebase_c000_ph000/"

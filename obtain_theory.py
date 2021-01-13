@@ -16,6 +16,7 @@ import argparse
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
+import pyccl as ccl
 from matplotlib import pyplot as plt
 from scipy.interpolate import interp1d
 
@@ -68,11 +69,21 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     i_pk = np.argmin(np.abs(zs_pk-z_nbody))+1
     i_zel = np.argmin(np.abs(zs_pk-z_ic))+1
 
+    # growth factor
+    cosmo = ccl.Cosmology(**cosmo_dict)
+    D_z_nbody = ccl.growth_factor(cosmo, 1./(1+z_nbody))
+    D_z_ic = ccl.growth_factor(cosmo, 1./(1+z_ic))
+    D_growth = D_z_nbody/D_z_ic
+
+    # name of folder in AbacusSummit/Cosmologies
+    index_cosm = int((sim_name.split('c')[-1]).split('_ph')[0])
+    name_cosm = "abacus_cosm%03d"%index_cosm
+    
     # power spectrum file
     # Lehman's computation
     #pk_fn = home+"/repos/hybrid_eft_nbody/data/%s/z%4.3f/r_smooth_%d/power_nfft2048.csv"%(sim_name,z_nbody,int(R_smooth))
-    pk_fn = home+"/repos/AbacusSummit/Cosmologies/abacus_cosm000/abacus_cosm000.z%d_pk_cb.dat"%i_pk
-    pk_zel_fn = home+"/repos/AbacusSummit/Cosmologies/abacus_cosm000/abacus_cosm000.z%d_pk_cb.dat"%i_zel
+    pk_fn = home+"/repos/AbacusSummit/Cosmologies/"+name_cosm+"/"+name_cosm+".z%d_pk_cb.dat"%i_pk
+    pk_zel_fn = home+"/repos/AbacusSummit/Cosmologies/"+name_cosm+"/"+name_cosm+".z%d_pk_cb.dat"%i_zel
                                                                                      
     # templates from nbody
     ks_all = np.load(data_dir+"ks_all.npy")
@@ -89,7 +100,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     # Lehman's computation
     #bs,bs,klin,plin,bs  = np.loadtxt(pk_fn, unpack=True)
     plin      *= D**2
-    pzel      *= 44.9161430332162**2
+    pzel      *= D_growth**2
 
     # Initialize the class -- with no wisdom file passed it will
     # experiment to find the fastest FFT algorithm for the system.
@@ -234,7 +245,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
 
     plt.xlabel('k [h/Mpc]')
     plt.ylabel(r'$P_{ab}$ [(Mpc/h)$^3$]')
-    plt.savefig("figs/templates_LPT_z%4.3f.png"%z_nbody)
+    plt.savefig("figs/templates_LPT_"+sim_name+"_z%4.3f.png"%z_nbody)
     plt.close()
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):

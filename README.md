@@ -49,3 +49,7 @@ obtain power took 4 tasks on a single node total 64 GB and < 18 mins (requested 
 obtain halo positions took 421.4453125 MB and 8.194952011108398 s for hugebase
 
 obtain power for Pk_hh only took 2 mins with 64 GB for hugebase (and threshold)
+
+# Covariance matrix saved on:
+
+/global/cscratch1/sd/damonge/NbodySims/cls_covG_covNG_DESgc_DESwl.fits

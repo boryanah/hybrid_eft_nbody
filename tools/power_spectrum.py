@@ -30,7 +30,7 @@ def CompensateTSC(w, v):
         v = v / tmp
     return v
 
-def get_mesh(field,pos_parts_fns,N_dim,Lbox,interlaced,m_thr=None):
+def get_mesh(field, pos_parts_fns, N_dim, Lbox, interlaced, m_thr=None):
     # create catalog from fitsfile
     cat = FITSCatalog(pos_parts_fns, ext='Data') 
 
