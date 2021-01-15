@@ -25,6 +25,7 @@ home = os.path.expanduser("~")
 sys.path.append(home+'/repos/velocileptors')
 from velocileptors.LPT.cleft_fftw import CLEFT
 from choose_parameters import load_dict
+from tools.read_params import get_dict
 
 # colour table in HTML hex format
 hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4477AA',
@@ -44,7 +45,7 @@ def extrapolate(Pk_tmp, ks, kv, is_pivot, offset=10):
     Pk_0 = 10.**(np.log10(kv[0])*slope + np.log10(Pk_tmp[is_pivot]))
     print(Pk_0,kv[0],slope,ks[is_pivot+offset])
     Pk_frank = np.hstack((Pk_0,Pk_tmp[is_pivot:]))
-    kf = np.hstack((kv[0],ks[is_pivot:]))
+    kf = np.hstack((0.3*ks[is_pivot],ks[is_pivot:]))
     return Pk_frank, kf
 
 def save_asdf(data_dict,filename,save_dir):
@@ -60,9 +61,12 @@ def save_asdf(data_dict,filename,save_dir):
 def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     
     # now we need the choose parameters
-    #data_dir =  home+"/repos/hybrid_eft_nbody/data/%s/z%4.3f/r_smooth_%d/"%(sim_name,z_nbody,int(R_smooth))
-    user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
-    data_dir = user_dict['data_dir']
+    if machine == 'alan':
+        #data_dir =  home+"/repos/hybrid_eft_nbody/data/%s/z%4.3f/r_smooth_%d/"%(sim_name,z_nbody,int(R_smooth))
+        data_dir =  home+"/repos/hybrid_eft_nbody/data/%s/z%4.3f/"%(sim_name,z_nbody)
+    else:
+        user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
+        data_dir = user_dict['data_dir']
 
     # indices for the CLASS files
     zs_pk = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1, 99.0])
@@ -70,6 +74,17 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     i_zel = np.argmin(np.abs(zs_pk-z_ic))+1
 
     # growth factor
+    class_dict = get_dict(sim_name)
+    h = np.float(class_dict['h'])
+    n_s = np.float(class_dict['n_s'])
+    Omega_b = np.float(class_dict['omega_b']/h**2)
+    Omega_c = np.float(class_dict['omega_cdm']/h**2)
+    sigma8 = np.float(class_dict['sigma8_m'])
+    cosmo_dict = {'h': h,
+                  'n_s': n_s,
+                  'Omega_c': Omega_c,
+                  'Omega_b': Omega_b,
+                  'sigma8': sigma8}
     cosmo = ccl.Cosmology(**cosmo_dict)
     D_z_nbody = ccl.growth_factor(cosmo, 1./(1+z_nbody))
     D_z_ic = ccl.growth_factor(cosmo, 1./(1+z_ic))
@@ -104,6 +119,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
 
     # Initialize the class -- with no wisdom file passed it will
     # experiment to find the fastest FFT algorithm for the system.
+    # B.H. modified velocileptors/Utils/loginterp.py in case of exception error
     start = time.time()
     cleft = CLEFT(klin,plin,cutoff=10)
     print("Elapsed time: ",time.time()-start," seconds.")
@@ -164,14 +180,16 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     spectra_frank_dic = {}
     plt.subplots(2,3,figsize=(18,10))
     for i,key in enumerate(spectra.keys()):
-        if key == r'$(1,b_s)$' or key == r'$(b_1,b_s)$':
+        if key in [r'$(1,b_s)$', r'$(b_1,b_s)$']:
             kpivot = 0.1
-        elif key == r'$(b_2,b_s)$' or key == r'$(b_s,b_s)$':
+        elif key in [r'$(b_2,b_s)$', r'$(b_s,b_s)$']:
             kpivot = 3.e-2
         elif key == r'$(b_{\nabla^2},b_s)$':
             kpivot = 2.e-1
         elif key == r'$(b_2,b_{\nabla^2})$':
             kpivot = 4.e-1
+        elif key == r'$(b_1,b_{\nabla^2})$':
+            kpivot = 7.e-2
         else:
             kpivot = 9.e-2
         kpivot_dic[key] = kpivot
@@ -191,32 +209,49 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
             Pk_tmp /= 2 
 
         # those are negative so we make them positive in order to show them in logpsace
-        if 'b_s' in key and r'$(b_s,b_s)$' != key and r'$(b_2,b_s)$' != key:
+        if key in [r'$(b_{\nabla^2},b_s)$', r'$(b_1,b_s)$', r'$(1,b_s)$']:
             Pk_tmp *= -1 
             Pk_lpt *= -1
 
-        # this term is positive if nabla^2 delta = -k^2 delta, but reason we multiply here is that we use k^2 P_zeldovich in theory
-        if key == r'$(b_{\nabla^2},b_s)$':
-            Pk_lpt *= -1
+            # this term is positive if nabla^2 delta = -k^2 delta, but reason we multiply here is that we use k^2 P_zeldovich in theory
+            if key == r'$(b_{\nabla^2},b_s)$':
+                Pk_lpt *= -1
 
         # compute the factor
         factor = spectra[key][iv_pivot]/nbody_spectra[key][is_pivot]
         print("factor for %s = "%key,factor)
 
         # normalization
-        Pk_lpt /= factor
+        #Pk_lpt /= factor
 
         # frankensteining
-        Pk_frank = np.hstack((Pk_lpt[:iv_pivot],Pk_tmp[is_pivot:]))
-        kf = np.hstack((kv[:iv_pivot],ks[is_pivot:]))
+        Pk_frank = np.hstack((Pk_lpt[:iv_pivot], Pk_tmp[is_pivot:]))
+        kf = np.hstack((kv[:iv_pivot], ks[is_pivot:]))
 
-        # exterpolate as a power law
-        if key in [r'$(b_{\nabla^2},b_s)$',r'$(b_{\nabla^2},b_{\nabla^2})$',r'$(b_2,b_{\nabla^2})$']:
+        # exterpolate as a power law (done for all nabla^2 terms)
+        if key in [r'$(b_{\nabla^2},b_s)$',r'$(b_{\nabla^2},b_{\nabla^2})$',r'$(b_2,b_{\nabla^2})$',r'$(b_1,b_{\nabla^2})$']:
             print("extrapolating")
-            Pk_frank, kf = extrapolate(Pk_tmp, ks, kv, is_pivot)
+            if key == r'$(b_{\nabla^2},b_{\nabla^2})$':
+                const = np.mean(Pk_tmp[:is_pivot])
+                f = interp1d(ks[:is_pivot], np.ones(is_pivot)*const, bounds_error=False, fill_value=const)
+                Pk_frank = np.hstack((f(kv[:iv_pivot]), Pk_tmp[is_pivot:]))
+            else:
+                '''
+                k_plunge = 0.3*kpivot
+                i_plunge  = np.argmin(np.abs(kv-kpivot))
+                k_add = np.array([k_plunge, .5*(k_plunge+ks[is_pivot]), .75*(k_plunge+ks[is_pivot]), ks[is_pivot]])
+                Pk_add = np.array([0.001, 0.85, 0.9, 1.])*Pk_tmp[is_pivot]
+                f = interp1d(k_add, Pk_add, kind='cubic', bounds_error=False, fill_value='extrapolate')
+                Pk_frank = np.hstack((f(kv[:iv_pivot]), Pk_tmp[is_pivot:]))
+                #off = 5
+                #tail = spectra[r'$(b_1,b_s)$'][:iv_pivot-off]
+                #tail = np.hstack((np.zeros(off), tail))
+                #Pk_frank = np.hstack((tail/factor, Pk_tmp[is_pivot:]))
+                '''
+                Pk_frank, kf = extrapolate(Pk_tmp, ks, kv, is_pivot)
 
         # interpolate with the values that we want
-        f = interp1d(kf, Pk_frank)
+        f = interp1d(kf, Pk_frank, bounds_error=False, fill_value=0.)
         Pk_frank = f(k_frank)
         spectra_frank_dic[key] = Pk_frank
         print("----------------------------")

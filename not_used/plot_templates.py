@@ -3,13 +3,14 @@ import matplotlib.pyplot as plt
 from choose_parameters import load_dict
 
 # redshift choice
-z_nbody = 1.1
+#z_nbody = 1.1
+z_nbody = 1.
 
 machine = 'alan'
-machine = 'NERSC'
+#machine = 'NERSC'
 
-sim_name = "AbacusSummit_hugebase_c000_ph000"
-#sim_name = "Sim256"
+#sim_name = "AbacusSummit_hugebase_c000_ph000"
+sim_name = "Sim256"
 
 user_dict, cosmo_dict = load_dict(z_nbody,sim_name,machine)
 
@@ -66,7 +67,8 @@ for i in range(ncurve):
         
     if i % nperplot == 0:
         #plt.errorbar(ks,Pk_hh,yerr=Pk_err,color='black',label='hh',zorder=1)
-        plt.plot(ks,Pk_hh,color='black',label='hh',zorder=1)
+        #plt.plot(ks,Pk_hh,color='black',label='hh',zorder=1)
+        print("skipping hh")
     plt.plot(ks,Pk,label=label)
 
     plt.xlabel(r"$k$ [$h \ \mathrm{Mpc}^{-1}$]")

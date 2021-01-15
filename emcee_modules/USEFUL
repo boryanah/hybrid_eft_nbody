@@ -1,0 +1,6 @@
+e ../config/bias_pk.yaml
+
+
+mpirun -np 8 /home/boryanah/anaconda3/envs/p3/bin/python run_emcee.py --path2config ../config/bias_pk.yaml > test.txt
+
+./run_emcee.py --path2config ../config/bias_pk.yaml
