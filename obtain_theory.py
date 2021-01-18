@@ -180,10 +180,10 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
 
 
     # create frankenstein templates
-    kpivot_dic = {}
     spectra_frank_dic = {}
     plt.subplots(2,3,figsize=(18,10))
     for i,key in enumerate(spectra.keys()):
+        # pivot scale (i.e. k number where we switch between theory and numerics)
         if key in [r'$(1,b_s)$', r'$(b_1,b_s)$']:
             kpivot = 0.1
         elif key in [r'$(b_2,b_s)$', r'$(b_s,b_s)$']:
@@ -196,7 +196,6 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
             kpivot = 7.e-2
         else:
             kpivot = 9.e-2
-        kpivot_dic[key] = kpivot
 
         # indices of the pivot
         iv_pivot = np.argmin(np.abs(kv-kpivot))
@@ -208,24 +207,24 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
 
         # LPT defines 1/2 (delta^2-<delta^2>)
         if key == r'$(b_2,b_2)$':
-            Pk_tmp /= 4
+            Pk_tmp /= 4.
         elif 'b_2' in key:
-            Pk_tmp /= 2 
+            Pk_tmp /= 2.
 
         # those are negative so we make them positive in order to show them in logpsace
-        if key in [r'$(b_{\nabla^2},b_s)$', r'$(b_1,b_s)$', r'$(1,b_s)$']:
+        if key in [r'$(b_1,b_s)$', r'$(1,b_s)$']:
             Pk_tmp *= -1 
             Pk_lpt *= -1
 
-            # this term is positive if nabla^2 delta = -k^2 delta, but reason we multiply here is that we use k^2 P_zeldovich in theory
-            if key == r'$(b_{\nabla^2},b_s)$':
-                Pk_lpt *= -1
+        # this term is positive if nabla^2 delta = -k^2 delta, but reason we multiply here is that we use k^2 delta instead and k^2 P_zeldovich
+        if key == r'$(b_{\nabla^2},b_s)$':
+            Pk_tmp *= -1
 
         # compute the factor
         factor = spectra[key][iv_pivot]/nbody_spectra[key][is_pivot]
         print("factor for %s = "%key,factor)
 
-        # normalization
+        # normalization is not necessary since the theory and simulation match well
         #Pk_lpt /= factor
 
         # frankensteining
@@ -255,7 +254,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         else:
             # og
             #Pk_frank = np.hstack((Pk_lpt[:iv_pivot], Pk_tmp[is_pivot:]))
-            # TESTING
+            # elegant scheme for interpolating between theory and simulations
             w = (1. - np.tanh(100*(kf-kpivot))) * 0.5
             
             f = interp1d(kv, Pk_lpt, bounds_error=False, fill_value=0.)
@@ -268,9 +267,17 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         # interpolate with the values that we want
         f = interp1d(kf, Pk_frank, bounds_error=False, fill_value=0.)
         Pk_frank = f(k_frank)
-        # TESTING
-        Pk_frank = gaussian_filter(Pk_frank,10.)
+        
+        # gaussian filtering to smooth function
+        Pk_frank = gaussian_filter(Pk_frank, 10.)
+
+        # getting back to original sign
+        # Note: you can also add all of the nabla^2 templates if you wanna have -k^2 delta, but note that in that case b_nabla^2, b_s is positive! 
+        if key in [r'$(b_{\nabla^2},b_s)$', r'$(b_1,b_s)$', r'$(1,b_s)$']:
+            Pk_frank *= -1.
+        
         spectra_frank_dic[key] = Pk_frank
+        
         print("----------------------------")
         
     # add the wavenumbers to the dictionary
