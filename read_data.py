@@ -1,7 +1,7 @@
 import sacc
 from astropy.io import fits
 
-filename = "cls_covG_covNG_DESgc_DESwl.fits"
+filename = "data/cls_covG_covNG_DESgc_DESwl.fits"
 
 s = sacc.Sacc.load_fits(filename)
 
@@ -17,6 +17,10 @@ for i, tracer in enumerate(s.tracers):
     #print(s.tracers[key].z)
     #print(s.tracers[key].nz)
 
+for tr1, tr2 in s.get_tracer_combinations():
+    print(tr1, tr2)
+quit()
+    
 for i in range(len(dt)):
     t = s.get_tracer_combinations(dt[i])
 

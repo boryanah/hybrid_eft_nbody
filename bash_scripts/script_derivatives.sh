@@ -7,7 +7,7 @@ output="derivatives.sh"
 rm "$output"
 while read -r zline; do
     while read -r pline; do
-	echo -n "${exec} --sim_name ${line} --z_nbody ${zline} --par_vary ${pline}" >> "$output"
+	echo -n "${exec} --z_nbody ${zline} --pars_vary ${pline}" >> "$output"
 	echo "" >> "${output}"
     done < "$input_p"
 done < "$input_z"

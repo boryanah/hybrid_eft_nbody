@@ -19,6 +19,7 @@ matplotlib.use('Agg')
 import pyccl as ccl
 from matplotlib import pyplot as plt
 from scipy.interpolate import interp1d
+from scipy.ndimage import gaussian_filter
 
 # home directory
 home = os.path.expanduser("~")
@@ -48,9 +49,12 @@ def extrapolate(Pk_tmp, ks, kv, is_pivot, offset=10):
     kf = np.hstack((0.3*ks[is_pivot],ks[is_pivot:]))
     return Pk_frank, kf
 
-def save_asdf(data_dict,filename,save_dir):
+def save_asdf(data_dict, filename, save_dir, header=None):
     # create data tree structure
-    data_tree = {"data": data_dict}
+    data_tree = {}
+    data_tree['data'] = data_dict
+    if header != None:
+        data_tree['header'] = header
 
     # save the data and close file
     output_file = asdf.AsdfFile(data_tree)
@@ -225,9 +229,8 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         #Pk_lpt /= factor
 
         # frankensteining
-        Pk_frank = np.hstack((Pk_lpt[:iv_pivot], Pk_tmp[is_pivot:]))
         kf = np.hstack((kv[:iv_pivot], ks[is_pivot:]))
-
+                
         # exterpolate as a power law (done for all nabla^2 terms)
         if key in [r'$(b_{\nabla^2},b_s)$',r'$(b_{\nabla^2},b_{\nabla^2})$',r'$(b_2,b_{\nabla^2})$',r'$(b_1,b_{\nabla^2})$']:
             print("extrapolating")
@@ -249,10 +252,24 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
                 #Pk_frank = np.hstack((tail/factor, Pk_tmp[is_pivot:]))
                 '''
                 Pk_frank, kf = extrapolate(Pk_tmp, ks, kv, is_pivot)
+        else:
+            # og
+            #Pk_frank = np.hstack((Pk_lpt[:iv_pivot], Pk_tmp[is_pivot:]))
+            # TESTING
+            w = (1. - np.tanh(100*(kf-kpivot))) * 0.5
+            
+            f = interp1d(kv, Pk_lpt, bounds_error=False, fill_value=0.)
+            Pk_lpt = f(kf)
+            f = interp1d(ks, Pk_tmp, bounds_error=False, fill_value=0.)
+            Pk_tmp = f(kf)
+            Pk_frank = w * Pk_lpt + (1-w) * Pk_tmp
+    
 
         # interpolate with the values that we want
         f = interp1d(kf, Pk_frank, bounds_error=False, fill_value=0.)
         Pk_frank = f(k_frank)
+        # TESTING
+        Pk_frank = gaussian_filter(Pk_frank,10.)
         spectra_frank_dic[key] = Pk_frank
         print("----------------------------")
         
@@ -273,7 +290,7 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         plt.subplot(2,3,plot_no)
         plt.loglog(k_frank, Pk_frank, color=hexcols[i], label=key)
         #plt.loglog(kv, Pk_lpt, color=hexcols[i], label=key)
-        plt.loglog(ks, Pk_tmp, ls='--', color=hexcols[i])
+        #plt.loglog(ks, Pk_tmp, ls='--', color=hexcols[i])
         #plt.loglog(klin, plin, ls='-', color='y')
 
         plt.legend(ncol=1)
