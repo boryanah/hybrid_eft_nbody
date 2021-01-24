@@ -95,6 +95,7 @@ class PowerTheory(object):
 
         # galaxy tracer
         tracer = ccl.NumberCountsTracer(cosmo, has_rsd=self.cl_params['has_rsd'], dndz=(self.z_s, self.nz_s), bias=(self.z_s, self.bz_s), mag_bias=self.cl_params['has_magnification'])
+        #tracer = ccl.WeakLensingTracer(cosmo, dndz=(self.z_s, self.nz_s), has_shear=True)
 
         ks = self.power_ij['ks']
         pk_a = np.zeros((len(self.a_s), len(self.power_ij['ks'])))
@@ -109,6 +110,7 @@ class PowerTheory(object):
             pk_a[k,:] = pk
         ells, cl = project_Cl(cosmo, tracer, pk_a, ks, self.a_s)
         cl = np.interp(self.x, ells, cl)
+        
         return cl
         
     def init_cl_ij(self, cosmo):
@@ -116,7 +118,8 @@ class PowerTheory(object):
         Compute theoretical prediction for the angular power spectra templates
         """
         # galaxy tracer
-        tracer = ccl.NumberCountsTracer(cosmo, has_rsd=self.cl_params['has_rsd'], dndz=(self.z_s, self.nz_s), bias=(self.z_s, self.bz_s), mag_bias=self.cl_params['has_magnification'])
+        tracer = ccl.NumberCountsTracer(cosmo, has_rsd=self.cl_params['has_rsd'], dndz=(self.z_s, self.nz_s), bias=(self.z_s, self.b_s), mag_bias=self.cl_params['has_magnification'])
+        #tracer = ccl.WeakLensingTracer(cosmo, dndz=(self.z_s, self.nz_s), has_shear=True)
 
         # templates as a function of redshift
         Pk_tmps_a = self.power_ij

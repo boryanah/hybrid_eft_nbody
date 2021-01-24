@@ -1,7 +1,10 @@
 #!/bin/bash
-input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names_theory.txt"
-input_z="${HOME}/repos/hybrid_eft_nbody/bash_scripts/redshifts_theory.txt"
-exec="../obtain_theory.py --machine NERSC "
+input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names.txt"
+input_z="${HOME}/repos/hybrid_eft_nbody/bash_scripts/redshifts.txt"
+#input="${HOME}/repos/hybrid_eft_nbody/bash_scripts/sim_names_theory.txt"
+#input_z="${HOME}/repos/hybrid_eft_nbody/bash_scripts/redshifts_theory.txt"
+#exec="../obtain_theory.py --machine NERSC "
+exec="../obtain_theory.py --machine alan "
 output="theory.sh"
 counter=0
 rm "$output"
