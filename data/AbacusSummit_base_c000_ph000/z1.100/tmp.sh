@@ -1,0 +1,14 @@
+git add    ../z0.500/r_smooth_0/Pk_all_0.npy
+git add    ../z0.500/r_smooth_0/k_lengths.npy
+git add    ../z0.500/r_smooth_0/ks_all.npy
+git add    ../z0.800/r_smooth_0/Pk_all_0.npy
+git add    ../z0.800/r_smooth_0/k_lengths.npy
+git add    ../z0.800/r_smooth_0/ks_all.npy
+git add    r_smooth_0/Pk_all_0.npy
+git add    r_smooth_0/Pk_mm.npy
+git add    r_smooth_0/k_lengths.npy
+git add    r_smooth_0/ks_all.npy
+git add    r_smooth_0/power_nfft2048.csv
+git add    r_smooth_1/Pk_all_1.npy
+git add    r_smooth_1/k_lengths.npy
+git add    r_smooth_1/ks_all.npy
