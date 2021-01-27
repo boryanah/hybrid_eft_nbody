@@ -31,10 +31,12 @@ hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4
            '#CC6677', '#AA4499', '#6699CC', '#AA4466', '#882255', '#661100', '#0099BB', '#DDCC77']
 
 DEFAULTS = {}
-DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
+#DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
+DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph000"
 DEFAULTS['z_templates'] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1]
 DEFAULTS['R_smooth'] = 0.
-DEFAULTS['machine'] = 'NERSC'
+#DEFAULTS['machine'] = 'NERSC'
+DEFAULTS['machine'] = 'alan'
 DEFAULTS['pars_vary'] = ['omega_b', 'omega_cdm', 'n_s', 'sigma8_cb']
 
 
@@ -228,8 +230,9 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
     header.pop(r'wa_fld')
 
     print(fid_Pk_dPk_templates.keys())
-    # todo check that you can call class get the theta star value and then output the H0 value
 
+    # invoke class to get theta value
+    '''
     from classy import Class
     target_param_dict = header.copy()
 
@@ -239,22 +242,16 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
     theta_target = target_cosmo.theta_s_100()
     print("Target 100*theta_s = ",theta_target)
     print('h = ', target_param_dict['h'])
-
-    # og
-    '''
-    new_cosmo = Class()
-    new_param_dict = target_param_dict.copy()
-    new_param_dict['omega_cdm'] = 0.11
-    new_cosmo.set(new_param_dict)
-    new_cosmo.compute()
-    '''
-    # TESTING works
-    #target_cosmo.set({'omega_cdm': 0.11})
+    target_cosmo.set({'omega_cdm': 0.11})
     target_cosmo.compute()
     new_cosmo = target_cosmo
-
-    # this_cosmo can have same params as target_cosmo changing only the 4 parameters that are being varied and g
     h = search(new_cosmo, theta_target)
+    '''
+    # TESTING TESTING
+    theta_target = 1.041533
+    h = 0.6736
+        
+    # this_cosmo can have same params as target_cosmo changing only the 4 parameters that are being varied and g
     header['theta_s_100'] = theta_target
     header['sigma8_cb'] = fid_dict['sigma8_cb']
     header['w0_fld'] = fid_dict['w0_fld']

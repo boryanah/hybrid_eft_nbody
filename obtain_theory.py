@@ -34,12 +34,13 @@ hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4
             '#0099BB', '#DDCC77']
 
 DEFAULTS = {}
-#DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph000"
-DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
+DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph000"
+#DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
 DEFAULTS['z_nbody'] = 1.1
 DEFAULTS['z_ic'] = 99.
 DEFAULTS['R_smooth'] = 0.
-DEFAULTS['machine'] = 'NERSC'
+#DEFAULTS['machine'] = 'NERSC'
+DEFAULTS['machine'] = 'alan'
 
 def extrapolate(Pk_tmp, ks, kv, is_pivot, offset=10):
     slope = (np.log10(Pk_tmp[is_pivot+offset])-np.log10(Pk_tmp[is_pivot]))/(np.log10(ks[is_pivot+offset])-np.log10(ks[is_pivot]))
@@ -185,13 +186,13 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     for i,key in enumerate(spectra.keys()):
         # pivot scale (i.e. k number where we switch between theory and numerics)
         if key in [r'$(1,b_s)$', r'$(b_1,b_s)$']:
-            kpivot = 0.1
+            kpivot = 0.2
         elif key in [r'$(b_2,b_s)$', r'$(b_s,b_s)$']:
             kpivot = 3.e-2
         elif key == r'$(b_{\nabla^2},b_s)$':
             kpivot = 2.e-1
         elif key == r'$(b_2,b_{\nabla^2})$':
-            kpivot = 4.e-1
+            kpivot = 3.e-1
         elif key == r'$(b_1,b_{\nabla^2})$':
             kpivot = 7.e-2
         else:
@@ -200,7 +201,8 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         # indices of the pivot
         iv_pivot = np.argmin(np.abs(kv-kpivot))
         is_pivot = np.argmin(np.abs(ks-kpivot))
-
+        if_pivot = np.argmin(np.abs(k_frank-kpivot))
+        
         # get the templates and theory for this spectrum
         Pk_tmp = nbody_spectra[key]
         Pk_lpt = spectra[key]
@@ -224,9 +226,6 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         factor = spectra[key][iv_pivot]/nbody_spectra[key][is_pivot]
         print("factor for %s = "%key,factor)
 
-        # normalization is not necessary since the theory and simulation match well
-        #Pk_lpt /= factor
-
         # frankensteining
         kf = np.hstack((kv[:iv_pivot], ks[is_pivot:]))
                 
@@ -237,19 +236,22 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
                 const = np.mean(Pk_tmp[:is_pivot])
                 f = interp1d(ks[:is_pivot], np.ones(is_pivot)*const, bounds_error=False, fill_value=const)
                 Pk_frank = np.hstack((f(kv[:iv_pivot]), Pk_tmp[is_pivot:]))
+            elif key == r'$(b_{\nabla^2},b_s)$':
+                Pk_eft = kv**2*(spectra[r'$(1,b_s)$']*0+spectra[r'$(b_1,b_s)$'])
+                # og
+                #fac = Pk_eft[iv_pivot]/nbody_spectra[key][is_pivot]
+                # TESTING
+                fac = 0.4
+                Pk_frank = np.hstack(((Pk_eft/fac)[:iv_pivot],(nbody_spectra[r'$(b_{\nabla^2},b_s)$'])[is_pivot:]))
+            elif key == r'$(b_2,b_{\nabla^2})$':
+                Pk_eft = kv**2*(spectra[r'$(1,b_2)$']*0+spectra[r'$(b_1,b_2)$'])
+                # TESTING
+                fac = 3.7
+                Pk_frank = np.hstack(((Pk_eft/fac)[:iv_pivot],(nbody_spectra[key])[is_pivot:]))
+            elif key == r'$(b_1,b_{\nabla^2})$':
+                Pk_frank = np.hstack(((kv**2*(spectra[r'$(1,b_1)$']+spectra[r'$(b_1,b_1)$']))[:iv_pivot],(nbody_spectra[r'$(b_1,b_{\nabla^2})$'])[is_pivot:]))
             else:
-                '''
-                k_plunge = 0.3*kpivot
-                i_plunge  = np.argmin(np.abs(kv-kpivot))
-                k_add = np.array([k_plunge, .5*(k_plunge+ks[is_pivot]), .75*(k_plunge+ks[is_pivot]), ks[is_pivot]])
-                Pk_add = np.array([0.001, 0.85, 0.9, 1.])*Pk_tmp[is_pivot]
-                f = interp1d(k_add, Pk_add, kind='cubic', bounds_error=False, fill_value='extrapolate')
-                Pk_frank = np.hstack((f(kv[:iv_pivot]), Pk_tmp[is_pivot:]))
-                #off = 5
-                #tail = spectra[r'$(b_1,b_s)$'][:iv_pivot-off]
-                #tail = np.hstack((np.zeros(off), tail))
-                #Pk_frank = np.hstack((tail/factor, Pk_tmp[is_pivot:]))
-                '''
+                # currently not used -- extrapolating with a power law
                 Pk_frank, kf = extrapolate(Pk_tmp, ks, kv, is_pivot)
         else:
             # og
@@ -269,11 +271,14 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         Pk_frank = f(k_frank)
         
         # gaussian filtering to smooth function
+        # TESTING
+        #Pk_frank[if_pivot-100:if_pivot+100] = gaussian_filter(Pk_frank[if_pivot-100:if_pivot+100], 10.)
         Pk_frank = gaussian_filter(Pk_frank, 10.)
 
         # getting back to original sign
         # Note: you can also add all of the nabla^2 templates if you wanna have -k^2 delta, but note that in that case b_nabla^2, b_s is positive! 
         if key in [r'$(b_{\nabla^2},b_s)$', r'$(b_1,b_s)$', r'$(1,b_s)$']:
+            #print("Multiply by -1 for real run")
             Pk_frank *= -1.
         
         spectra_frank_dic[key] = Pk_frank
@@ -295,9 +300,10 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         plot_no = plot_dic[key]
         
         plt.subplot(2,3,plot_no)
-        plt.loglog(k_frank, Pk_frank, color=hexcols[i], label=key)
+        plt.loglog(k_frank, np.abs(Pk_frank), color=hexcols[i], label=key)
         #plt.loglog(kv, Pk_lpt, color=hexcols[i], label=key)
-        #plt.loglog(ks, Pk_tmp, ls='--', color=hexcols[i])
+        if 'nabla' in key:
+            plt.loglog(ks, np.abs(Pk_tmp), ls='--', color=hexcols[i])
         #plt.loglog(klin, plin, ls='-', color='y')
 
         plt.legend(ncol=1)
