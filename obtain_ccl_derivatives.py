@@ -25,6 +25,7 @@ home = os.path.expanduser("~")
 from choose_parameters import load_dict
 from tools.read_params import get_dict
 from obtain_theory import save_asdf
+import pyccl as ccl
 
 # colour table in HTML hex format
 hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4477AA',
@@ -140,7 +141,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
 
         # available parameters
         main_name = 'AbacusSummit_base'
-        sim_par_dict = {'omega_b': [main_name+'_c100_ph000', main_name+'_c101_ph000'],
+        sim_par_dict = {'omega_b': [main_name+'_c100_ph000', main_name+'_c101_ph000', main_name+'_c100_ph000', main_name+'_c101_ph000'],
                        'omega_cdm': [main_name+'_c102_ph000', main_name+'_c103_ph000', main_name+'_c117_ph000', main_name+'_c118_ph000'],
                        'n_s': [main_name+'_c104_ph000', main_name+'_c105_ph000', main_name+'_c119_ph000', main_name+'_c120_ph000'],
                        'sigma8_cb': [main_name+'_c112_ph000', main_name+'_c113_ph000', main_name+'_c125_ph000', main_name+'_c126_ph000']}
@@ -151,7 +152,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
 
             # load templates for these simulations
             # temporarily let's use the fine derivatives for z = 1.1, 0.8, and 0.5 for the omega_cdm simulations
-            if par_vary == 'omega_cdm' and z_nbody in [0.5, 0.8, 1.1]:
+            if (par_vary == 'omega_cdm') and (z_nbody in [0.5, 0.8, 1.1]):
                 sim_names[0] = sim_names[2]
                 sim_names[1] = sim_names[3]
             elif (z_nbody in [0.4, 0.3, 0.2, 0.1]) or (par_vary == 'omega_b'):
@@ -174,7 +175,30 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
             h_large = pars_dict[sim_names[0]][par_vary] - fid_dict[par_vary]
             if check_derivatives:
                 h_small = pars_dict[sim_names[2]][par_vary] - fid_dict[par_vary]
+                
 
+            # TESTING tuks starts
+            Pk_halofit = {}
+            names_hf = ['large_plus', 'large_minus', 'small_plus', 'small_minus']
+            for s, name_hf in enumerate(names_hf):
+                h = pars_dict[sim_names[s]]['h']
+                omega_cdm = pars_dict[sim_names[s]]['omega_cdm']
+                omega_b = pars_dict[sim_names[s]]['omega_b']
+                n_s = pars_dict[sim_names[s]]['n_s']
+                A_s = pars_dict[sim_names[s]]['A_s']
+                param_dict = {'transfer_function': 'boltzmann_class'}
+                param_dict['h'] = float(h)
+                param_dict['Omega_c'] = float(omega_cdm/h**2)
+                param_dict['Omega_b'] = float(omega_b/h**2)
+                param_dict['n_s'] = float(n_s)
+                param_dict['A_s'] = float(A_s)
+                cosmo_ccl = ccl.Cosmology(**param_dict)
+                Pk_halofit[name_hf] = ccl.nonlin_matter_power(cosmo_ccl, ks*h, a=1./(1+z_nbody))*h**3
+            cosmo_ccl = ccl.Cosmology(A_s=float(fid_dict['A_s']), n_s=float(fid_dict['n_s']), Omega_b=float(fid_dict['omega_b'])/float(fid_dict['h'])**2, Omega_c=float(fid_dict['omega_cdm'])/float(fid_dict['h'])**2, h=float(fid_dict['h']), transfer_function='boltzmann_class')
+            Pk_halofit['fiducial'] = ccl.nonlin_matter_power(cosmo_ccl, Pk_templates['ks']*h, a=1./(1+z_nbody))*fid_dict['h']**3
+            # TESTING tuks ends
+
+            
             plot_no = 1
             plt.subplots(3, 5, figsize=(18,10))
             # plot spectra and save derivatives
@@ -182,36 +206,28 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
 
                 # save the fiducial power spectrum
                 if key == 'ks': i -= 1; continue
-                Pk_tmp = Pk_templates[key]
-                Pk_tmp_plus = Pk_templates_large_plus[key]
-                Pk_tmp_minus = Pk_templates_large_minus[key]
-                dPk_tmp = deriv_Pk(Pk_tmp_plus, Pk_tmp_minus, Pk_tmp, h_large)
-
+                rat_Pk_tmp = Pk_templates[key]/Pk_templates[r'$(1,1)$']#Pk_halofit['fiducial']
+                rat_Pk_tmp_plus = Pk_templates_large_plus[key]/Pk_templates_large_plus[r'$(1,1)$']#Pk_halofit['large_plus']
+                rat_Pk_tmp_minus = Pk_templates_large_minus[key]/Pk_templates_large_minus[r'$(1,1)$']#Pk_halofit['large_minus']
+                drat_Pk_tmp = deriv_Pk(rat_Pk_tmp_plus, rat_Pk_tmp_minus, rat_Pk_tmp, h_large, method='both')
                 
                 # need to save the derivatives
-                fid_Pk_dPk_templates[z_str+'_'+key2str(key)+'_'+par_vary] = dPk_tmp
+                fid_Pk_dPk_templates[z_str+'_'+key2str(key)+'_'+par_vary] = drat_Pk_tmp
                 if j == 0:
-                    fid_Pk_dPk_templates[z_str+'_'+key2str(key)] = Pk_tmp
+                    fid_Pk_dPk_templates[z_str+'_'+key2str(key)] = rat_Pk_tmp
 
+                
                 if check_derivatives:
-                    Pk_pred_plus, Pk_pred_minus = predict_Pk(Pk_tmp, dPk_tmp, h_small)
+                    Pk_pred_plus, Pk_pred_minus = predict_Pk(rat_Pk_tmp, drat_Pk_tmp, h_small)
+                    Pk_pred_plus *= Pk_halofit['small_plus']
+                    Pk_pred_minus *= Pk_halofit['small_minus']
                     Pk_true_plus = Pk_templates_small_plus[key]
                     Pk_true_minus = Pk_templates_small_minus[key]
-
-                    # TESTING
-                    '''
-                    Pk_pred_plus, Pk_pred_minus = predict_Pk(Pk_tmp, dPk_tmp, h_large)
-                    Pk_true_plus = Pk_tmp_plus
-                    Pk_true_minus = Pk_tmp_minus
-                    '''
-
+                    
                     print(key2str(key))
                     if key2str(key) == '1_1':
                         print(par_vary, h_small, z_nbody)
-                        np.save("../montepython_public/Pk_11_"+par_vary+"_ztmp%d.npy"%k, Pk_pred_plus)
-                        #np.save("../montepython_public/Pk_11_"+par_vary+"_ztmp%d.npy"%k, Pk_true_plus)
-
-                    
+                        np.save("Pk_11_"+par_vary+"_ztmp%d.npy"%k, Pk_pred_plus)
                     
                     plt.subplot(3,5,plot_no)
                     #plt.loglog(ks, Pk_true_plus, color=hexcols[i], label=key+' plus')
@@ -228,31 +244,28 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
                     #plt.ylabel(r'$P_{ab}$ [(Mpc/h)$^3$]')
                     if plot_no % 5 == 1:
                         plt.ylabel(r'$P_{ab}^{\rm pred}/P_{ab}^{\rm true}$')
-                    plt.ylim([0.8, 1.2])
+                    plt.ylim([0.9, 1.1])
                     plot_no += 1
             plt.savefig("figs/deriv_"+par_vary+"__z%4.3f.png"%z_nbody)
             plt.close()
             
     # add the wavenumbers
     fid_Pk_dPk_templates['ks'] = ks
-
+    
     # add the header with fiducial cosmological parameters and the redshifts of the templates [how do elegantly]
     #header = {par: fid_dict[par] for par in pars_vary}
     #header['h'] = fid_dict['h']
     header = fid_dict.copy()
     header.pop(r'notes')
     header.pop(r'root')
-    #header['sigma8'] = header['sigma8_cb']# TESTING CLASS does not take sigma8
-    #header.pop(r'A_s') # TESTING CLASS does not take sigma8
     header.pop(r'sigma8_cb') # og
     header.pop(r'sigma8_m')
     header.pop(r'w0_fld')
     header.pop(r'wa_fld')
 
     print(fid_Pk_dPk_templates.keys())
+    # todo check that you can call class get the theta star value and then output the H0 value
 
-    # invoke class to get theta value
-    '''
     from classy import Class
     target_param_dict = header.copy()
 
@@ -262,16 +275,13 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
     theta_target = target_cosmo.theta_s_100()
     print("Target 100*theta_s = ",theta_target)
     print('h = ', target_param_dict['h'])
-    target_cosmo.set({'omega_cdm': 0.11})
+
+    #target_cosmo.set({'omega_cdm': 0.11})
     target_cosmo.compute()
     new_cosmo = target_cosmo
-    h = search(new_cosmo, theta_target)
-    '''
-    # TESTING
-    theta_target = 1.041533
-    h = 0.6736
-        
+
     # this_cosmo can have same params as target_cosmo changing only the 4 parameters that are being varied and g
+    h = search(new_cosmo, theta_target)
     header['theta_s_100'] = theta_target
     header['sigma8_cb'] = fid_dict['sigma8_cb']
     header['w0_fld'] = fid_dict['w0_fld']
@@ -285,7 +295,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
     print(header.items())
         
     # save as asdf file
-    save_asdf(fid_Pk_dPk_templates,"fid_Pk_dPk_templates_%d.asdf"%(int(R_smooth)), data_dir, header=header)
+    save_asdf(fid_Pk_dPk_templates,"fid_rat_Pk_dPk_templates_%d.asdf"%(int(R_smooth)), data_dir, header=header)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
