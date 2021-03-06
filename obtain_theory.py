@@ -28,15 +28,27 @@ from velocileptors.LPT.cleft_fftw import CLEFT
 from choose_parameters import load_dict
 from tools.read_params import get_dict
 
+
+# matplotlib settings
+from matplotlib import rc
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+rc('font',**{'family':'serif','serif':['Times'],'size':18})
+rc('text', usetex=True)
+
 # colour table in HTML hex format
-hexcols = ['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4477AA',
+hexcols = np.array(['#44AA99', '#117733', '#999933', '#88CCEE', '#332288', '#BBBBBB', '#4477AA',
            '#CC6677', '#AA4499', '#6699CC', '#AA4466', '#882255', '#661100',
-            '#0099BB', '#DDCC77']
+            '#0099BB', '#DDCC77'])
+np.random.seed(100)
+inds = np.arange(len(hexcols), dtype=int)
+np.random.shuffle(inds)
+print(inds)
+hexcols = hexcols[inds]
 
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph000"
 #DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
-DEFAULTS['z_nbody'] = 1.1
+DEFAULTS['z_nbody'] = 0.5#1.1
 DEFAULTS['z_ic'] = 99.
 DEFAULTS['R_smooth'] = 0.
 #DEFAULTS['machine'] = 'NERSC'
@@ -179,6 +191,12 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
                r'$(1,b_s)$':4, r'$(b_1,b_s)$': 5, r'$(b_1,b_{\nabla^2})$': 5,  r'$(b_2,b_s)$': 3, r'$(b_s,b_s)$':6,
                r'$(1,b_{\nabla^2})$':4, r'$(b_2,b_{\nabla^2})$': 3, r'$(b_{\nabla^2},b_s)$': 6, r'$(b_{\nabla^2},b_{\nabla^2})$': 6}
 
+    label_dic={r'$(1,1)$': r'$P_{00}(k)$',
+               r'$(1,b_1)$': r'$P_{01}(k)$', r'$(b_1,b_1)$': r'$P_{11}(k)$',\
+               r'$(1,b_2)$': r'$P_{02}(k)$', r'$(b_1,b_2)$': r'$P_{12}(k)$',  r'$(b_2,b_2)$': r'$P_{22}(k)$',\
+               r'$(1,b_s)$': r'$P_{0s}(k)$', r'$(b_1,b_s)$': r'$P_{1s}(k)$', r'$(b_1,b_{\nabla^2})$': r'$P_{1\nabla}(k)$',  r'$(b_2,b_s)$': r'$P_{2s}(k)$', r'$(b_s,b_s)$': r'$P_{ss}(k)$',
+               r'$(1,b_{\nabla^2})$': r'$P_{0\nabla}(k)$', r'$(b_2,b_{\nabla^2})$': r'$P_{2\nabla}(k)$', r'$(b_{\nabla^2},b_s)$': r'$P_{s\nabla}(k)$', r'$(b_{\nabla^2},b_{\nabla^2})$': r'$P_{\nabla\nabla}(k)$'}
+
 
     # create frankenstein templates
     spectra_frank_dic = {}
@@ -289,7 +307,8 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
     spectra_frank_dic['ks'] = k_frank
     
     # save as asdf file
-    save_asdf(spectra_frank_dic,"Pk_templates_%d.asdf"%(int(R_smooth)),data_dir)
+    #save_asdf(spectra_frank_dic,"Pk_templates_%d.asdf"%(int(R_smooth)),data_dir)
+    print("NOT SAVING ASDF!")
     
     # plot spectra
     for i,key in enumerate(spectra.keys()):
@@ -300,17 +319,22 @@ def main(sim_name, z_nbody, z_ic, R_smooth, machine):
         plot_no = plot_dic[key]
         
         plt.subplot(2,3,plot_no)
-        plt.loglog(k_frank, np.abs(Pk_frank), color=hexcols[i], label=key)
-        #plt.loglog(kv, Pk_lpt, color=hexcols[i], label=key)
+        plt.loglog(k_frank, np.abs(Pk_frank), color=hexcols[i], label=label_dic[key])
+        plt.loglog(ks, np.abs(Pk_tmp), ls='--', color=hexcols[i])
         if 'nabla' in key:
-            plt.loglog(ks, np.abs(Pk_tmp), ls='--', color=hexcols[i])
+            pass#plt.loglog(ks, np.abs(Pk_tmp), ls='--', color=hexcols[i])
+        else:
+            plt.loglog(kv, Pk_lpt, color=hexcols[i], ls=':')#, label=key)
         #plt.loglog(klin, plin, ls='-', color='y')
 
         plt.legend(ncol=1)
 
-    plt.xlabel('k [h/Mpc]')
-    plt.ylabel(r'$P_{ab}$ [(Mpc/h)$^3$]')
-    plt.savefig("figs/templates_LPT_"+sim_name+"_z%4.3f.png"%z_nbody)
+        if plot_no in [1, 4]:
+            plt.ylabel(r'$P_{\alpha \beta}(k) \ [({\rm Mpc}/h)^3]$')
+        if plot_no in [4, 5, 6]:
+            plt.xlabel(r'$k \ [h/{\rm Mpc}]$')
+
+    plt.savefig("figs/templates_"+sim_name.replace('AbacusSummit_base_','')+"_z%4.3f.pdf"%z_nbody)
     plt.close()
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
