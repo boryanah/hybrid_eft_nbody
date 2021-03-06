@@ -154,6 +154,10 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
             if par_vary == 'omega_cdm' and z_nbody in [0.5, 0.8, 1.1]:
                 sim_names[0] = sim_names[2]
                 sim_names[1] = sim_names[3]
+            elif (z_nbody in [0.4, 0.3, 0.2, 0.1]) or (par_vary == 'omega_b'):
+                sim_names[2] = sim_names[0]
+                sim_names[3] = sim_names[1]
+                
             Pk_templates_large_plus = asdf.open(os.path.join(data_dir.replace(sim_name, sim_names[0]), "Pk_templates_%d.asdf"%(int(R_smooth))))['data']
             Pk_templates_large_minus = asdf.open(os.path.join(data_dir.replace(sim_name, sim_names[1]), "Pk_templates_%d.asdf"%(int(R_smooth))))['data']
             if check_derivatives:
@@ -182,6 +186,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
                 Pk_tmp_plus = Pk_templates_large_plus[key]
                 Pk_tmp_minus = Pk_templates_large_minus[key]
                 dPk_tmp = deriv_Pk(Pk_tmp_plus, Pk_tmp_minus, Pk_tmp, h_large)
+
                 
                 # need to save the derivatives
                 fid_Pk_dPk_templates[z_str+'_'+key2str(key)+'_'+par_vary] = dPk_tmp
@@ -193,6 +198,21 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
                     Pk_true_plus = Pk_templates_small_plus[key]
                     Pk_true_minus = Pk_templates_small_minus[key]
 
+                    # TESTING
+                    '''
+                    Pk_pred_plus, Pk_pred_minus = predict_Pk(Pk_tmp, dPk_tmp, h_large)
+                    Pk_true_plus = Pk_tmp_plus
+                    Pk_true_minus = Pk_tmp_minus
+                    '''
+
+                    print(key2str(key))
+                    if key2str(key) == '1_1':
+                        print(par_vary, h_small, z_nbody)
+                        np.save("../montepython_public/Pk_11_"+par_vary+"_ztmp%d.npy"%k, Pk_pred_plus)
+                        #np.save("../montepython_public/Pk_11_"+par_vary+"_ztmp%d.npy"%k, Pk_true_plus)
+
+                    
+                    
                     plt.subplot(3,5,plot_no)
                     #plt.loglog(ks, Pk_true_plus, color=hexcols[i], label=key+' plus')
                     #plt.loglog(ks, Pk_pred_plus, color=hexcols[i], ls='--')
@@ -247,7 +267,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
     new_cosmo = target_cosmo
     h = search(new_cosmo, theta_target)
     '''
-    # TESTING TESTING
+    # TESTING
     theta_target = 1.041533
     h = 0.6736
         
