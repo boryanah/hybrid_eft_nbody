@@ -177,7 +177,7 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
                 h_small = pars_dict[sim_names[2]][par_vary] - fid_dict[par_vary]
                 
 
-            # TESTING tuks starts
+            # filling a dictionary of halofit values for derivatives and fiducial
             Pk_halofit = {}
             names_hf = ['large_plus', 'large_minus', 'small_plus', 'small_minus']
             for s, name_hf in enumerate(names_hf):
@@ -196,14 +196,29 @@ def main(sim_name, z_templates, R_smooth, machine, pars_vary, check_derivatives=
                 Pk_halofit[name_hf] = ccl.nonlin_matter_power(cosmo_ccl, ks*h, a=1./(1+z_nbody))*h**3
             cosmo_ccl = ccl.Cosmology(A_s=float(fid_dict['A_s']), n_s=float(fid_dict['n_s']), Omega_b=float(fid_dict['omega_b'])/float(fid_dict['h'])**2, Omega_c=float(fid_dict['omega_cdm'])/float(fid_dict['h'])**2, h=float(fid_dict['h']), transfer_function='boltzmann_class')
             Pk_halofit['fiducial'] = ccl.nonlin_matter_power(cosmo_ccl, Pk_templates['ks']*h, a=1./(1+z_nbody))*fid_dict['h']**3
-            # TESTING tuks ends
 
+
+            '''
+            # TESTING ratio halofit to templates
+            print("z = ", z_nbody)
+            ratio = Pk_templates[r'$(1,1)$']/Pk_halofit['fiducial']
+            np.save("Pk11_Pkhf.npy", ratio)
+            np.save("ks.npy", ks)
+            plt.plot(ks, ratio, label=r'$z = %.1f$'%z_nbody)
+            plt.legend()
+            plt.xscale('log')
+            plt.xlabel(r"$k \ [h/{\rm Mpc}]$")
+            plt.ylabel(r"$P_{11}(k)/P_{\rm hf}(k)$")
+            plt.savefig("Pk11_Pkhf.png")
+            plt.show()
+            '''
             
             plot_no = 1
             plt.subplots(3, 5, figsize=(18,10))
             # plot spectra and save derivatives
             for i, key in enumerate(Pk_templates.keys()):
 
+                
                 # save the fiducial power spectrum
                 if key == 'ks': i -= 1; continue
                 rat_Pk_tmp = Pk_templates[key]/Pk_templates[r'$(1,1)$']#Pk_halofit['fiducial']
